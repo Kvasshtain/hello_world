@@ -5,6 +5,7 @@ use {
     solana_account_info::AccountInfo, solana_msg::msg, solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError, solana_pubkey::Pubkey, 
 };
+use crate::api::transfer::transfer_from_to;
 
 // transaction executor
 pub fn execute(
@@ -30,7 +31,10 @@ pub fn execute(
         1 => {
             let len = u64::from_le_bytes(right.try_into().unwrap());
             resize_account(program_id, accounts, len as usize)
-
+        }
+        2 => {
+            let amount = u64::from_le_bytes(right.try_into().unwrap());
+            transfer_from_to(program_id, accounts, amount)
         }
         _ => Err(ProgramError::InvalidInstructionData)
     }
