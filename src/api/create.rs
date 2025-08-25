@@ -50,7 +50,5 @@ pub fn create_account(
     
     // cross-program invocation  
     // https://solana.com/docs/core/cpi
-    invoke_signed(&ix, &infos, &[  &[ seed, &[bump] ]  ])?;
-
-    Ok(())
+    invoke_signed(&ix, &infos, &[  &[ seed, &[bump] ]  ])
 }

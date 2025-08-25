@@ -1,11 +1,13 @@
 //! Program state processor
 
+use std::mem;
 use {
     crate::api::*,
     solana_account_info::AccountInfo, solana_msg::msg, solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError, solana_pubkey::Pubkey, 
 };
-use crate::api::transfer::transfer_from_to;
+use crate::api::transfer::transfer;
+use crate::api::transfer_from::transfer_from;
 
 // transaction executor
 pub fn execute(
@@ -34,7 +36,14 @@ pub fn execute(
         }
         2 => {
             let amount = u64::from_le_bytes(right.try_into().unwrap());
-            transfer_from_to(program_id, accounts, amount)
+            transfer(program_id, accounts, amount)
+        }
+        3 => {
+            if right.len() <= mem::size_of::<u64>() {drop(ProgramError::InvalidInstructionData);}
+            let (amount_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
+            let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
+            let seed = seed_bytes.try_into().unwrap();
+            transfer_from(program_id, accounts, seed, amount)
         }
         _ => Err(ProgramError::InvalidInstructionData)
     }
