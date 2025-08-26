@@ -20,7 +20,7 @@ pub fn transfer_from(
     let _payer = next_account_info(iter)?;
     let from = next_account_info(iter)?;
     let to = next_account_info(iter)?;
-    let _system_program_info = next_account_info(iter)?;
+    let _system = next_account_info(iter)?;
 
     let (from_key, bump) = Pubkey::find_program_address(&[seed], program_id);
 

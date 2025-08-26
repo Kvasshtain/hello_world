@@ -1,4 +1,7 @@
 use solana_msg::msg;
+use solana_program::program::invoke_signed;
+use solana_program::system_instruction;
+use solana_program_error::ProgramError;
 use {
     solana_pubkey::Pubkey,
     solana_account_info::{next_account_info, AccountInfo},
@@ -12,38 +15,51 @@ use {
 };
 
 // resize solana account data
-pub fn resize_account(
+pub fn allocate_account(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
-    size: usize
+    seed: &[u8],
+    size: u64
 ) -> ProgramResult {
-    msg!("resize_account");
+    msg!("allocate_account");
 
     let iter = &mut accounts.iter();
 
     let signer = next_account_info(iter)?; // first account - transaction signer
-    let info = next_account_info(iter)?; // account to resize
-    let _system = next_account_info(iter)?;     // system_program ("11111111111111111111111111111111")
+    let info = next_account_info(iter)?;   // account to resize
+    let system = next_account_info(iter)?; // system_program ("11111111111111111111111111111111")
 
     // check if account has required length
-    if info.data_len() == size {
-        return Ok(());
+    if info.data_len() != 0usize {
+        return Err(ProgramError::InvalidInstructionData)
     }
 
     // resize
-    info.resize(size)?;
+    let allocate_ix = system_instruction::allocate(info.key, size);
+
+    let (new_key, bump) = Pubkey::find_program_address(&[seed], _program_id);
+
+    invoke_signed(
+        &allocate_ix,
+        &[
+            info.clone(),
+            system.clone(),
+        ],
+        &[  &[ seed, &[bump] ]  ],
+    )?;
+
     // calculate rent exempt
     let rent = Rent::get()?.minimum_balance(info.data_len());
 
     // compare rent and account balance
     match rent.cmp(&info.lamports()) {
-        Greater => { 
+        Greater => {
             // account doesn't have enough funds
             // transfer funs to account
-            let ix = transfer(signer.key, info.key, rent - info.lamports());
+                let transfer_ix = transfer(signer.key, info.key, rent - info.lamports());
             let infos = vec![signer.clone(), info.clone()];
             // cross-program invocation (without seeds)
-            invoke(&ix, &infos)?;
+            invoke(&transfer_ix, &infos)?;
         }
         Less => {
             // account has too many lamports

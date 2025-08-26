@@ -6,6 +6,7 @@ use {
     solana_account_info::AccountInfo, solana_msg::msg, solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError, solana_pubkey::Pubkey, 
 };
+use crate::api::allocate::allocate_account;
 use crate::api::transfer::transfer;
 use crate::api::transfer_from::transfer_from;
 
@@ -31,8 +32,8 @@ pub fn execute(
     match left {
         0 => create_account(program_id, accounts, right),
         1 => {
-            let len = u64::from_le_bytes(right.try_into().unwrap());
-            resize_account(program_id, accounts, len as usize)
+            let size = u64::from_le_bytes(right.try_into().unwrap());
+            resize_account(program_id, accounts, size as usize)
         }
         2 => {
             let amount = u64::from_le_bytes(right.try_into().unwrap());
@@ -42,8 +43,15 @@ pub fn execute(
             if right.len() <= mem::size_of::<u64>() {drop(ProgramError::InvalidInstructionData);}
             let (amount_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
             let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
-            let seed = seed_bytes.try_into().unwrap();
+            let seed: &[u8] = seed_bytes.try_into().unwrap();
             transfer_from(program_id, accounts, seed, amount)
+        }
+        4 => {
+            if right.len() <= mem::size_of::<u64>() {drop(ProgramError::InvalidInstructionData);}
+            let (size_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
+            let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
+            let seed: &[u8] = seed_bytes.try_into().unwrap();
+            allocate_account(program_id, accounts, seed, size)
         }
         _ => Err(ProgramError::InvalidInstructionData)
     }
