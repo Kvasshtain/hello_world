@@ -2,10 +2,8 @@ use {
     solana_msg::msg,
     solana_pubkey::Pubkey,
     solana_account_info::{next_account_info, AccountInfo},
-    solana_program::{
-        program::invoke,
-        system_instruction,
-    },
+    solana_program::program::invoke,
+    solana_program::system_instruction,
     solana_program_entrypoint::ProgramResult,
 };
 

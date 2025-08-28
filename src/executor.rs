@@ -7,6 +7,7 @@ use {
     solana_program_error::ProgramError, solana_pubkey::Pubkey, 
 };
 use crate::api::allocate::allocate_account;
+use crate::api::assign::assign_account;
 use crate::api::transfer::transfer;
 use crate::api::transfer_from::transfer_from;
 
@@ -53,6 +54,7 @@ pub fn execute(
             let seed: &[u8] = seed_bytes.try_into().unwrap();
             allocate_account(program_id, accounts, seed, size)
         }
+        5 => assign_account(program_id, accounts, right),
         _ => Err(ProgramError::InvalidInstructionData)
     }
 }
