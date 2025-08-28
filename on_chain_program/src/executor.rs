@@ -1,35 +1,25 @@
-//! Program state processor
-
 use std::mem;
 use {
-    crate::api::*,
-    solana_account_info::AccountInfo, solana_msg::msg, solana_program_entrypoint::ProgramResult,
-    solana_program_error::ProgramError, solana_pubkey::Pubkey, 
+    crate::api::{
+        allocate::allocate_account, assign::assign_account, transfer::transfer,
+        transfer_from::transfer_from, *,
+    },
+    solana_account_info::AccountInfo,
+    solana_msg::msg,
+    solana_program_entrypoint::ProgramResult,
+    solana_program_error::ProgramError,
+    solana_pubkey::Pubkey,
 };
-use crate::api::allocate::allocate_account;
-use crate::api::assign::assign_account;
-use crate::api::transfer::transfer;
-use crate::api::transfer_from::transfer_from;
 
-// transaction executor
-pub fn execute(
-    program_id: &Pubkey,  // program_id of contract
-    accounts: &[AccountInfo],  // list of transaction accounts
-    data: &[u8],    // instruction data
-) -> ProgramResult {
-    
-    // log transaction for debug
-    let keys = accounts
-        .iter()
-        .map(|a| a.key)
-        .collect::<Vec<_>>();
+pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let keys = accounts.iter().map(|a| a.key).collect::<Vec<_>>();
     msg!("accounts: {:?}", keys);
     msg!("data: {}", hex::encode(data));
 
-    // parse transaction data
-    let (left, right) = data.split_first().ok_or(ProgramError::InvalidInstructionData)?;
+    let (left, right) = data
+        .split_first()
+        .ok_or(ProgramError::InvalidInstructionData)?;
 
-    // call instruction handler
     match left {
         0 => create_account(program_id, accounts, right),
         1 => {
@@ -41,21 +31,25 @@ pub fn execute(
             transfer(program_id, accounts, amount)
         }
         3 => {
-            if right.len() <= mem::size_of::<u64>() {drop(ProgramError::InvalidInstructionData);}
+            if right.len() <= mem::size_of::<u64>() {
+                drop(ProgramError::InvalidInstructionData);
+            }
             let (amount_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
             let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
             let seed: &[u8] = seed_bytes.try_into().unwrap();
             transfer_from(program_id, accounts, seed, amount)
         }
         4 => {
-            if right.len() <= mem::size_of::<u64>() {drop(ProgramError::InvalidInstructionData);}
+            if right.len() <= mem::size_of::<u64>() {
+                drop(ProgramError::InvalidInstructionData);
+            }
             let (size_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
             let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
             let seed: &[u8] = seed_bytes.try_into().unwrap();
             allocate_account(program_id, accounts, seed, size)
         }
         5 => assign_account(program_id, accounts, right),
-        _ => Err(ProgramError::InvalidInstructionData)
+        _ => Err(ProgramError::InvalidInstructionData),
     }
 }
 

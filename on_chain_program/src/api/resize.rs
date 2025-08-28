@@ -1,20 +1,17 @@
 use {
-    solana_pubkey::Pubkey,
     solana_account_info::{next_account_info, AccountInfo},
-    solana_system_interface::{instruction::transfer,},
-    solana_program::{
-        program::invoke,
-        rent::Rent, sysvar::Sysvar
-    },
+    solana_msg::msg,
+    solana_program::{program::invoke, rent::Rent, sysvar::Sysvar},
     solana_program_entrypoint::ProgramResult,
+    solana_pubkey::Pubkey,
+    solana_system_interface::instruction::transfer,
     std::cmp::Ordering::*,
-    solana_msg::msg
 };
 
 pub fn resize_account(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
-    size: usize
+    size: usize,
 ) -> ProgramResult {
     msg!("resize_account");
 
