@@ -38,6 +38,8 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
 
     let sig = match args.mode {
         TransactionType::Create => {
+            data.extend(args.size.unwrap().to_le_bytes());
+            data.extend(Pubkey::from_str(args.owner_pubkey.unwrap().as_str())?.to_bytes());
             let seed = args.seed.unwrap();
             data.extend(seed.as_bytes());
             let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);

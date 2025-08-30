@@ -1,4 +1,5 @@
 use std::mem;
+use solana_pubkey::PUBKEY_BYTES;
 use {
     crate::api::{
         allocate::allocate_account, assign::assign_account, transfer::transfer,
@@ -21,7 +22,17 @@ pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
         .ok_or(ProgramError::InvalidInstructionData)?;
 
     match left {
-        0 => create_account(program_id, accounts, right),
+        0 => {
+            if right.len() <= PUBKEY_BYTES + mem::size_of::<u64>() {
+                drop(ProgramError::InvalidInstructionData);
+            }
+            let (size_bytes, rest) = right.split_at(mem::size_of::<u64>());
+            let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
+            let (owner_bytes, seed_bytes) = rest.split_at(PUBKEY_BYTES);
+            let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
+            let seed: &[u8] = seed_bytes.try_into().unwrap();
+            create_account(program_id, accounts, size as usize, owner, seed)
+        }
         1 => {
             let size = u64::from_le_bytes(right.try_into().unwrap());
             resize_account(program_id, accounts, size as usize)

@@ -7,8 +7,10 @@ use {
     solana_system_interface::instruction,
 };
 
-pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], seed: &[u8]) -> ProgramResult {
+pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], size: usize, owner: Pubkey, seed: &[u8]) -> ProgramResult {
     msg!("create_account");
+
+    msg!("owner pubkey: {}", owner.to_string());
 
     let iter = &mut accounts.iter();
 
@@ -16,7 +18,7 @@ pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], seed: &[u8]
     let new = next_account_info(iter)?;
     let _system = next_account_info(iter)?;
 
-    let rent = Rent::get()?.minimum_balance(0);
+    let rent = Rent::get()?.minimum_balance(size);
 
     let (new_key, bump) = Pubkey::find_program_address(&[seed], program_id);
 
@@ -24,7 +26,7 @@ pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], seed: &[u8]
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let ix = &instruction::create_account(signer.key, new.key, rent, 0, &program_id);
+    let ix = &instruction::create_account(signer.key, new.key, rent, size as u64, &owner);
 
     let infos = vec![signer.clone(), new.clone()];
 

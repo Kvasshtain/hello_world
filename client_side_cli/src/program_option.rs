@@ -27,12 +27,13 @@ pub struct Args {
     #[arg(long, required_if_eq("mode", "assign"))]
     pub seed: Option<String>,
     /// New account size (ignored if mode = 0).
+    #[arg(long, required_if_eq("mode", "create"))]
     #[arg(long, required_if_eq("mode", "resize"))]
     #[arg(long, required_if_eq("mode", "allocate"))]
     pub size: Option<u64>,
-    // /// Source account Id (From which transfer will be done)
-    // #[arg(long, required_if_eq("mode", "send"))]
-    // pub source: Option<String>,
+    /// New account owner pubkey.
+    #[arg(long, required_if_eq("mode", "create"))]
+    pub owner_pubkey: Option<String>,
     /// Destination account Id (To which transfer will be done)
     #[arg(long, required_if_eq("mode", "transfer"))]
     #[arg(long, required_if_eq("mode", "transferfrom"))]
