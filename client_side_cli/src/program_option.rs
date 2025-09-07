@@ -7,10 +7,10 @@ pub(crate) use {clap::Parser, transaction_type::TransactionType};
 #[command(about = "cli application for the hello-world program", long_about = None) ]
 pub struct Args {
     /// Solana URL (for example http://localhost:8899)
-    #[arg(long)]
+    #[arg(long, default_value = "http://localhost:8899")]
     pub solana_url: String,
     /// Path to signer keypair file
-    #[arg(long)]
+    #[arg(long, default_value = "/home/kvasshtain/.config/solana/id.json")]
     pub keypair_path: String,
     #[arg(long)]
     /// Pubkey of smart contract
@@ -21,8 +21,7 @@ pub struct Args {
     /// Seed for PDA. If not set will be asked
     #[arg(long)]
     #[arg(long, required_if_eq("mode", "create"))]
-    #[arg(long, required_if_eq("mode", "resize"))]
-    #[arg(long, required_if_eq("mode", "transferfrom"))]
+    #[arg(long, required_if_eq("mode", "transfer-from"))]
     #[arg(long, required_if_eq("mode", "allocate"))]
     #[arg(long, required_if_eq("mode", "assign"))]
     pub seed: Option<String>,
@@ -36,10 +35,17 @@ pub struct Args {
     pub owner_pubkey: Option<String>,
     /// Destination account Id (To which transfer will be done)
     #[arg(long, required_if_eq("mode", "transfer"))]
-    #[arg(long, required_if_eq("mode", "transferfrom"))]
+    #[arg(long, required_if_eq("mode", "transfer-from"))]
     pub to: Option<String>,
+    /// Source account Id (From which transfer will be done)
+    #[arg(long, required_if_eq("mode", "transfer-from"))]
+    pub from: Option<String>,
     /// Lamports to send.
     #[arg(long, required_if_eq("mode", "transfer"))]
-    #[arg(long, required_if_eq("mode", "transferfrom"))]
+    #[arg(long, required_if_eq("mode", "transfer-from"))]
     pub amount: Option<u64>,
+    /// PDA-account pubkey.
+    #[arg(long, required_if_eq("mode", "resize"))]
+    #[arg(long, required_if_eq("mode", "assign"))]
+    pub pda_pubkey: Option<String>,
 }

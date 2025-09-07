@@ -47,8 +47,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
         }
         TransactionType::Resize => {
             data.extend(args.size.unwrap().to_le_bytes());
-            let (resized, _bump) =
-                Pubkey::find_program_address(&[&*args.seed.unwrap().as_bytes()], &program_id);
+            let resized: Pubkey = Pubkey::from_str(args.pda_pubkey.unwrap().as_str())?;
             build_tx(program_id, data, &client, tx_sig, resized).await?
         }
         TransactionType::Transfer => {
@@ -66,7 +65,8 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
             data.extend(args.amount.unwrap().to_le_bytes());
             let seed = args.seed.unwrap();
             data.extend(seed.as_bytes());
-            let (from, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
+            //let (from, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
+            let from = Pubkey::from_str(args.from.unwrap().as_str())?;
             build_transfer_from_tx(
                 program_id,
                 data,
@@ -87,7 +87,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
         TransactionType::Assign => {
             let seed = args.seed.unwrap();
             data.extend(seed.as_bytes());
-            let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
+            let new: Pubkey = Pubkey::from_str(args.pda_pubkey.unwrap().as_str())?;
             build_tx(program_id, data, &client, tx_sig, new).await?
         }
     };

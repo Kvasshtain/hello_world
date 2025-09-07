@@ -23,8 +23,8 @@ pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
 
     match left {
         0 => {
-            if right.len() <= PUBKEY_BYTES + mem::size_of::<u64>() {
-                drop(ProgramError::InvalidInstructionData);
+            if right.len() <= PUBKEY_BYTES + mem::size_of::<u64>() + 1 {
+                return Err(ProgramError::InvalidInstructionData);
             }
             let (size_bytes, rest) = right.split_at(mem::size_of::<u64>());
             let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
@@ -43,7 +43,7 @@ pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
         }
         3 => {
             if right.len() <= mem::size_of::<u64>() {
-                drop(ProgramError::InvalidInstructionData);
+                return Err(ProgramError::InvalidInstructionData);
             }
             let (amount_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
             let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
@@ -52,7 +52,7 @@ pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
         }
         4 => {
             if right.len() <= mem::size_of::<u64>() {
-                drop(ProgramError::InvalidInstructionData);
+                return Err(ProgramError::InvalidInstructionData);
             }
             let (size_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
             let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
