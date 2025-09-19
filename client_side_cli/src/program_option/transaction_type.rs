@@ -9,4 +9,6 @@ pub enum TransactionType {
     TransferFrom = 3,
     Allocate = 4,
     Assign = 5,
+    Deposit = 6,
+    //CreateSpl = 7,
 }

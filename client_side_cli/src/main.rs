@@ -1,9 +1,15 @@
+mod create_spl_transaction;
+mod deposit_transactions;
 mod instructions;
 mod program_option;
 mod transaction_data;
 mod transactions;
 mod transfer_from_transaction;
 
+const PROGRAM_WALLET_SEED: &[u8] = "PROGRAM_WALLET_SEED".as_bytes();
+
+use crate::deposit_transactions::build_deposit_tx;
+use solana_sdk::signature::Signer;
 use {
     crate::program_option::{Args, TransactionType},
     crate::transaction_data::show_tx_data,
@@ -12,14 +18,18 @@ use {
     anyhow::Result,
     clap::Parser,
     solana_client::nonblocking::rpc_client::RpcClient,
+    solana_sdk::signature::Keypair,
     solana_sdk::{
         commitment_config::{CommitmentConfig, CommitmentLevel},
         pubkey::Pubkey,
         signature::{Signature, read_keypair_file},
     },
+    spl_associated_token_account_client::{
+        address::get_associated_token_address_and_bump_seed_internal,
+        instruction::create_associated_token_account,
+    },
     std::{path::Path, str::FromStr},
 };
-
 // path to keypair
 //const KEYPAIR_PATH: &str = "/home/kvasshtain/.config/solana/id.json";
 
@@ -29,7 +39,7 @@ use {
 //const PROGRAM_ID: &str = "4fnvoc7wADwtwJ9SRUvL7KpCBTp8qztm5GqjZBFP7GTt";
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
-    let tx_sig = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
+    let tx_sig: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
 
     // 2: 2nd - account to create
     let program_id: Pubkey = Pubkey::from_str(args.program_pubkey.as_str())?;
@@ -90,7 +100,41 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
             let new: Pubkey = Pubkey::from_str(args.pda_pubkey.unwrap().as_str())?;
             build_tx(program_id, data, &client, tx_sig, new).await?
         }
+        TransactionType::Deposit => {
+            data.extend(args.amount.unwrap().to_le_bytes());
+            let ata_user_wallet = Pubkey::from_str(args.ata_user_wallet.unwrap().as_str())?;
+            let (usr_pda_key, _bump) =
+                Pubkey::find_program_address(&[&tx_sig.pubkey().to_bytes()], &program_id);
+            let mint = Pubkey::from_str(args.mint.unwrap().as_str())?;
+            let (program_wallet_key, bump) =
+                Pubkey::find_program_address(&[PROGRAM_WALLET_SEED], &program_id);
+            let (ata_program_wallet_key, _bump) =
+                get_associated_token_address_and_bump_seed_internal(
+                    &program_wallet_key,
+                    &mint,
+                    &spl_associated_token_account::ID,
+                    &spl_token::ID,
+                );
+            build_deposit_tx(
+                program_id,
+                data,
+                &client,
+                tx_sig,
+                ata_user_wallet,
+                usr_pda_key,
+                program_wallet_key,
+                ata_program_wallet_key,
+                spl_token::ID,
+                spl_associated_token_account::ID,
+                mint,
+            )
+            .await?
+        } // TransactionType::CreateSpl => {
+          //     build_create_spl_tx(program_id, data, &client, tx_sig, ).await?
+          // }
     };
+
+
 
     println!("job has been done, solana signature: {}", sig);
 

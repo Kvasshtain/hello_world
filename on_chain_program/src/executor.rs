@@ -1,9 +1,9 @@
-use std::mem;
 use solana_pubkey::PUBKEY_BYTES;
+use std::mem;
 use {
     crate::api::{
-        allocate::allocate_account, assign::assign_account, transfer::transfer,
-        transfer_from::transfer_from, *,
+        allocate::allocate_account, assign::assign_account, create_spl::create_spl,
+        deposit::deposit, transfer::transfer, transfer_from::transfer_from, *,
     },
     solana_account_info::AccountInfo,
     solana_msg::msg,
@@ -12,7 +12,11 @@ use {
     solana_pubkey::Pubkey,
 };
 
-pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+pub fn execute<'a>(
+    program_id: &Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    data: &'a [u8],
+) -> ProgramResult {
     let keys = accounts.iter().map(|a| a.key).collect::<Vec<_>>();
     msg!("accounts: {:?}", keys);
     msg!("data: {}", hex::encode(data));
@@ -60,6 +64,12 @@ pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
             allocate_account(program_id, accounts, seed, size)
         }
         5 => assign_account(program_id, accounts, right),
+        6 => deposit(
+            program_id,
+            accounts,
+            u64::from_le_bytes(right.try_into().unwrap()),
+        ),
+        //7 => create_spl(accounts),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }

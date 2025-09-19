@@ -7,7 +7,13 @@ use {
     solana_system_interface::instruction,
 };
 
-pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], size: usize, owner: Pubkey, seed: &[u8]) -> ProgramResult {
+pub fn create_account(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    size: usize,
+    owner: Pubkey,
+    seed: &[u8],
+) -> ProgramResult {
     msg!("create_account");
 
     msg!("owner pubkey: {}", owner.to_string());
