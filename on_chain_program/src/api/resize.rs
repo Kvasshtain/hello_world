@@ -27,7 +27,7 @@ pub fn resize_account(
         return Ok(());
     }
 
-    info.resize(size)?;
+    info.realloc(size, false)?;
     let rent = Rent::get()?.minimum_balance(info.data_len());
 
     match rent.cmp(&info.lamports()) {
