@@ -1,5 +1,6 @@
 mod transaction_type;
 
+use solana_sdk::pubkey::Pubkey;
 pub(crate) use {clap::Parser, transaction_type::TransactionType};
 
 #[derive(Parser, Debug)]
@@ -43,9 +44,17 @@ pub struct Args {
     /// Lamports to send.
     #[arg(long, required_if_eq("mode", "transfer"))]
     #[arg(long, required_if_eq("mode", "transfer-from"))]
+    #[arg(long, required_if_eq("mode", "deposit"))]
     pub amount: Option<u64>,
     /// PDA-account pubkey.
     #[arg(long, required_if_eq("mode", "resize"))]
     #[arg(long, required_if_eq("mode", "assign"))]
     pub pda_pubkey: Option<String>,
+
+    /// User ATA-account pubkey.
+    #[arg(long, required_if_eq("mode", "deposit"))]
+    pub ata_user_wallet: Option<String>,
+    /// Mint account pubkey.
+    #[arg(long, required_if_eq("mode", "deposit"))]
+    pub mint: Option<String>,
 }

@@ -1,0 +1,13 @@
+[workspace]
+
+members = [
+    "client_side_cli",
+    "on_chain_program",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+spl-token = { version = "8.0.0", features = ["no-entrypoint"]}
+spl-associated-token-account = { version = "7.0.0", features = ["no-entrypoint"] }
+spl-associated-token-account-client = "2.0.0"

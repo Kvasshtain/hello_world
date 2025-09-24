@@ -8,15 +8,23 @@ use {
     solana_pubkey::Pubkey,
     solana_system_interface::instruction::transfer,
     std::cmp::Ordering::*,
+    std::mem,
 };
 
 pub fn allocate_account(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
-    seed: &[u8],
-    size: u64,
+    data: &[u8],
 ) -> ProgramResult {
     msg!("allocate_account");
+
+    if data.len() <= mem::size_of::<u64>() {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+
+    let (size_bytes, seed_bytes) = data.split_at(mem::size_of::<u64>());
+    let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
+    let seed: &[u8] = seed_bytes.try_into().unwrap();
 
     let iter = &mut accounts.iter();
 
