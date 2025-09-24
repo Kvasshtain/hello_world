@@ -8,21 +8,22 @@ mod transfer_from_transaction;
 
 const PROGRAM_WALLET_SEED: &[u8] = "PROGRAM_WALLET_SEED".as_bytes();
 
-use crate::deposit_transactions::build_deposit_tx;
-use solana_sdk::signature::Signer;
 use {
-    crate::program_option::{Args, TransactionType},
-    crate::transaction_data::show_tx_data,
-    crate::transactions::build_tx,
-    crate::transfer_from_transaction::build_transfer_from_tx,
+    crate::{
+        deposit_transactions::build_deposit_tx,
+        program_option::{Args, TransactionType},
+        transaction_data::show_tx_data,
+        transactions::build_tx,
+        transfer_from_transaction::build_transfer_from_tx,
+    },
     anyhow::Result,
     clap::Parser,
     solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::signature::Keypair,
     solana_sdk::{
         commitment_config::{CommitmentConfig, CommitmentLevel},
         pubkey::Pubkey,
-        signature::{Signature, read_keypair_file},
+        signature::Signer,
+        signature::{Keypair, Signature, read_keypair_file},
     },
     spl_associated_token_account_client::{
         address::get_associated_token_address_and_bump_seed_internal,
@@ -30,13 +31,6 @@ use {
     },
     std::{path::Path, str::FromStr},
 };
-// path to keypair
-//const KEYPAIR_PATH: &str = "/home/kvasshtain/.config/solana/id.json";
-
-// solana is running on local machine
-//const SOLANA_URL: &str = "http://localhost:8899";
-
-//const PROGRAM_ID: &str = "4fnvoc7wADwtwJ9SRUvL7KpCBTp8qztm5GqjZBFP7GTt";
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
     let tx_sig: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
@@ -102,10 +96,13 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
         }
         TransactionType::Deposit => {
             data.extend(args.amount.unwrap().to_le_bytes());
+            data.extend(tx_sig.pubkey().to_bytes());
             let ata_user_wallet = Pubkey::from_str(args.ata_user_wallet.unwrap().as_str())?;
+            data.extend(ata_user_wallet.to_bytes());
             let (usr_pda_key, _bump) =
                 Pubkey::find_program_address(&[&tx_sig.pubkey().to_bytes()], &program_id);
             let mint = Pubkey::from_str(args.mint.unwrap().as_str())?;
+            data.extend(mint.to_bytes());
             let (program_wallet_key, bump) =
                 Pubkey::find_program_address(&[PROGRAM_WALLET_SEED], &program_id);
             let (ata_program_wallet_key, _bump) =
@@ -133,8 +130,6 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
           //     build_create_spl_tx(program_id, data, &client, tx_sig, ).await?
           // }
     };
-
-
 
     println!("job has been done, solana signature: {}", sig);
 

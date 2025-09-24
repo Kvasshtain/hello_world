@@ -4,12 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-solana-sdk = "=2.2.1"
-solana-client = "=2.2.1"
+solana-client = "=2.2.7"
 tokio = "1.46.1"
 anyhow = "1.0.98"
-solana-transaction-status-client-types = "=2.2.1"
+solana-transaction-status-client-types = "=2.2.7"
 clap = { version = "4.5.45", features = ["derive"] }
-spl-token = { version = "8.0.0", features = ["no-entrypoint"]}
-spl-associated-token-account = { version = "7.0.0", features = ["no-entrypoint"] }
-spl-associated-token-account-client = "2.0.0"

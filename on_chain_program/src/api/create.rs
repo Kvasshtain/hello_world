@@ -4,17 +4,23 @@ use {
     solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
+    solana_pubkey::PUBKEY_BYTES,
     solana_system_interface::instruction,
+    std::mem,
 };
 
-pub fn create_account(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    size: usize,
-    owner: Pubkey,
-    seed: &[u8],
-) -> ProgramResult {
+pub fn create_account(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     msg!("create_account");
+
+    if data.len() <= PUBKEY_BYTES + mem::size_of::<u64>() + 1 {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+
+    let (size_bytes, rest) = data.split_at(mem::size_of::<u64>());
+    let size = u64::from_le_bytes(size_bytes.try_into().unwrap()) as usize;
+    let (owner_bytes, seed_bytes) = rest.split_at(PUBKEY_BYTES);
+    let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
+    let seed: &[u8] = seed_bytes.try_into().unwrap();
 
     msg!("owner pubkey: {}", owner.to_string());
 

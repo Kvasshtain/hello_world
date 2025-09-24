@@ -1,5 +1,3 @@
-use solana_pubkey::PUBKEY_BYTES;
-use std::mem;
 use {
     crate::api::{
         allocate::allocate_account, assign::assign_account, create_spl::create_spl,
@@ -26,49 +24,16 @@ pub fn execute<'a>(
         .ok_or(ProgramError::InvalidInstructionData)?;
 
     match left {
-        0 => {
-            if right.len() <= PUBKEY_BYTES + mem::size_of::<u64>() + 1 {
-                return Err(ProgramError::InvalidInstructionData);
-            }
-            let (size_bytes, rest) = right.split_at(mem::size_of::<u64>());
-            let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
-            let (owner_bytes, seed_bytes) = rest.split_at(PUBKEY_BYTES);
-            let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
-            let seed: &[u8] = seed_bytes.try_into().unwrap();
-            create_account(program_id, accounts, size as usize, owner, seed)
-        }
-        1 => {
-            let size = u64::from_le_bytes(right.try_into().unwrap());
-            resize_account(program_id, accounts, size as usize)
-        }
+        0 => create_account(program_id, accounts, right),
+        1 => resize_account(program_id, accounts, right),
         2 => {
             let amount = u64::from_le_bytes(right.try_into().unwrap());
-            transfer(program_id, accounts, amount)
+            transfer(program_id, accounts, right)
         }
-        3 => {
-            if right.len() <= mem::size_of::<u64>() {
-                return Err(ProgramError::InvalidInstructionData);
-            }
-            let (amount_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
-            let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
-            let seed: &[u8] = seed_bytes.try_into().unwrap();
-            transfer_from(program_id, accounts, seed, amount)
-        }
-        4 => {
-            if right.len() <= mem::size_of::<u64>() {
-                return Err(ProgramError::InvalidInstructionData);
-            }
-            let (size_bytes, seed_bytes) = right.split_at(mem::size_of::<u64>());
-            let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
-            let seed: &[u8] = seed_bytes.try_into().unwrap();
-            allocate_account(program_id, accounts, seed, size)
-        }
+        3 => transfer_from(program_id, accounts, right),
+        4 => allocate_account(program_id, accounts, right),
         5 => assign_account(program_id, accounts, right),
-        6 => deposit(
-            program_id,
-            accounts,
-            u64::from_le_bytes(right.try_into().unwrap()),
-        ),
+        6 => deposit(program_id, accounts, right),
         //7 => create_spl(accounts),
         _ => Err(ProgramError::InvalidInstructionData),
     }

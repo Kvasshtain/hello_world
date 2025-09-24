@@ -1,13 +1,4 @@
-use {
-    solana_account_info::{next_account_info, AccountInfo},
-    solana_program::{msg, program::invoke, rent::Rent, sysvar::Sysvar},
-    solana_program_entrypoint::ProgramResult,
-    solana_system_interface::instruction,
-    spl_associated_token_account::instruction::create_associated_token_account,
-    spl_token::instruction as token_instruction,
-};
-
-const MINT_SIZE: usize = 82;
+use {solana_account_info::AccountInfo, solana_program_entrypoint::ProgramResult};
 
 pub fn create_spl(accounts: &[AccountInfo]) -> ProgramResult {
     // let iter = &mut accounts.iter();

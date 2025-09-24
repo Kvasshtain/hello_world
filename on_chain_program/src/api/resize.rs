@@ -11,9 +11,11 @@ use {
 pub fn resize_account(
     _program_id: &Pubkey,
     accounts: &[AccountInfo],
-    size: usize,
+    data: &[u8],
 ) -> ProgramResult {
     msg!("resize_account");
+
+    let size = u64::from_le_bytes(data.try_into().unwrap()) as usize;
 
     let iter = &mut accounts.iter();
 

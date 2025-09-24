@@ -5,15 +5,19 @@ use {
     solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
+    std::mem,
 };
 
-pub fn transfer_from(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    seed: &[u8],
-    amount: u64,
-) -> ProgramResult {
+pub fn transfer_from(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     msg!("transfer_from");
+
+    if data.len() <= mem::size_of::<u64>() {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+
+    let (amount_bytes, seed_bytes) = data.split_at(mem::size_of::<u64>());
+    let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
+    let seed: &[u8] = seed_bytes.try_into().unwrap();
 
     let iter = &mut accounts.iter();
 

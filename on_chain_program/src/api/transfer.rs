@@ -1,14 +1,15 @@
 use {
     solana_account_info::{next_account_info, AccountInfo},
     solana_msg::msg,
-    solana_program::program::invoke,
-    solana_program::system_instruction,
+    solana_program::{program::invoke, system_instruction},
     solana_program_entrypoint::ProgramResult,
     solana_pubkey::Pubkey,
 };
 
-pub fn transfer(_program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> ProgramResult {
+pub fn transfer(_program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     msg!("transfer");
+
+    let amount = u64::from_le_bytes(data.try_into().unwrap());
 
     let iter = &mut accounts.iter();
 
