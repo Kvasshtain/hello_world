@@ -10,6 +10,18 @@ pub enum Error {
 
     #[error("account not found: {0}")]
     AccountNotFound(Pubkey),
+
+    #[error("Signer not found, or more than one signer was found")]
+    InvalidSigner,
+
+    #[error("An solana program error: {0}")]
+    ProgramError(ProgramError),
+}
+
+impl From<ProgramError> for Error {
+    fn from(e: ProgramError) -> Self {
+        Error::ProgramError(e)
+    }
 }
 
 impl From<Error> for ProgramError {

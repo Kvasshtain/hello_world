@@ -11,7 +11,7 @@ const PROGRAM_WALLET_SEED: &[u8] = "PROGRAM_WALLET_SEED".as_bytes();
 use {
     crate::{
         deposit_transactions::build_deposit_tx,
-        program_option::{Args, TransactionType},
+        program_option::{Args, Cmd},
         transaction_data::show_tx_data,
         transactions::build_tx,
         transfer_from_transaction::build_transfer_from_tx,
@@ -36,74 +36,102 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
     let tx_sig: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
 
     // 2: 2nd - account to create
-    let program_id: Pubkey = Pubkey::from_str(args.program_pubkey.as_str())?;
+    let program_id: Pubkey = Pubkey::from_str(args.program_id.as_str())?;
 
-    let mut data = vec![args.mode.clone() as u8];
+    let mut data: Vec<u8>;
 
-    let sig = match args.mode {
-        TransactionType::Create => {
-            data.extend(args.size.unwrap().to_le_bytes());
-            data.extend(Pubkey::from_str(args.owner_pubkey.unwrap().as_str())?.to_bytes());
-            let seed = args.seed.unwrap();
+    let sig = match args.cmd {
+        Cmd::Create {
+            seed,
+            size,
+            owner_pubkey,
+        } => {
+            data = vec![0];
+            data.extend(size.to_le_bytes());
+            data.extend(Pubkey::from_str(owner_pubkey.as_str())?.to_bytes());
+            let seed = seed;
             data.extend(seed.as_bytes());
             let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
             build_tx(program_id, data, &client, tx_sig, new).await?
         }
-        TransactionType::Resize => {
-            data.extend(args.size.unwrap().to_le_bytes());
-            let resized: Pubkey = Pubkey::from_str(args.pda_pubkey.unwrap().as_str())?;
+        Cmd::Resize {
+            size,
+            pda_pubkey,
+        } => {
+            data = vec![1];
+            data.extend(size.to_le_bytes());
+            let resized: Pubkey = Pubkey::from_str(pda_pubkey.as_str())?;
             build_tx(program_id, data, &client, tx_sig, resized).await?
         }
-        TransactionType::Transfer => {
-            data.extend(args.amount.unwrap().to_le_bytes());
+        Cmd::Transfer {
+            amount,
+            to,
+        } => {
+            data = vec![2];
+            data.extend(amount.to_le_bytes());
             build_tx(
                 program_id,
                 data,
                 &client,
                 tx_sig,
-                Pubkey::from_str(args.to.unwrap().as_str())?,
+                Pubkey::from_str(to.as_str())?,
             )
             .await?
         }
-        TransactionType::TransferFrom => {
-            data.extend(args.amount.unwrap().to_le_bytes());
-            let seed = args.seed.unwrap();
+        Cmd::TransferFrom {
+            amount,
+            seed,
+            from,
+            to,
+        } => {
+            data = vec![3];
+            data.extend(amount.to_le_bytes());
+            let seed = seed;
             data.extend(seed.as_bytes());
             //let (from, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
-            let from = Pubkey::from_str(args.from.unwrap().as_str())?;
+            let from = Pubkey::from_str(from.as_str())?;
             build_transfer_from_tx(
                 program_id,
                 data,
                 &client,
                 tx_sig,
                 from,
-                Pubkey::from_str(args.to.unwrap().as_str())?,
+                Pubkey::from_str(to.as_str())?,
             )
             .await?
         }
-        TransactionType::Allocate => {
-            data.extend(args.size.unwrap().to_le_bytes());
-            let seed = args.seed.unwrap();
+        Cmd::Allocate {
+            size,
+            seed,
+        } => {
+            data = vec![4];
+            data.extend(size.to_le_bytes());
+            let seed = seed;
             data.extend(seed.as_bytes());
             let (resized, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
             build_tx(program_id, data, &client, tx_sig, resized).await?
         }
-        TransactionType::Assign => {
-            let seed = args.seed.unwrap();
+        Cmd::Assign {
+            seed,
+            pda_pubkey,
+        } => {
+            data = vec![5];
+            let seed = seed;
             data.extend(seed.as_bytes());
-            let new: Pubkey = Pubkey::from_str(args.pda_pubkey.unwrap().as_str())?;
+            let new: Pubkey = Pubkey::from_str(pda_pubkey.as_str())?;
             build_tx(program_id, data, &client, tx_sig, new).await?
         }
-        TransactionType::Deposit => {
-            data.extend(args.amount.unwrap().to_le_bytes());
-            data.extend(tx_sig.pubkey().to_bytes());
-            let ata_user_wallet = Pubkey::from_str(args.ata_user_wallet.unwrap().as_str())?;
-            data.extend(ata_user_wallet.to_bytes());
+        Cmd::Deposit {
+            amount,
+            mint,
+        } => {
+            data = vec![6];
+            data.extend(amount.to_le_bytes());
             let (usr_pda_key, _bump) =
                 Pubkey::find_program_address(&[&tx_sig.pubkey().to_bytes()], &program_id);
-            let mint = Pubkey::from_str(args.mint.unwrap().as_str())?;
+            let mint = Pubkey::from_str(mint.as_str())?;
             data.extend(mint.to_bytes());
-            let (program_wallet_key, bump) =
+            let (program_wallet_key, _bump) =
                 Pubkey::find_program_address(&[PROGRAM_WALLET_SEED], &program_id);
             let (ata_program_wallet_key, _bump) =
                 get_associated_token_address_and_bump_seed_internal(
@@ -117,7 +145,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
                 data,
                 &client,
                 tx_sig,
-                ata_user_wallet,
+                ata_program_wallet_key,
                 usr_pda_key,
                 program_wallet_key,
                 ata_program_wallet_key,
@@ -138,7 +166,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
 
 pub async fn execute(args: Args) -> Result<()> {
     let client = RpcClient::new_with_commitment(
-        args.solana_url.to_string(),
+        args.url.to_string(),
         CommitmentConfig {
             commitment: CommitmentLevel::Confirmed,
         },

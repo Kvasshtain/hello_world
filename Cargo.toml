@@ -1,13 +1,28 @@
 [workspace]
 
 members = [
-    "client_side_cli",
-    "on_chain_program",
+    "cli",
+    "program",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
+solana-account-info = "2.2.1"
+solana-msg = "2.2.1"
+solana-program-entrypoint = "2.2.1"
+solana-pubkey = "2.2.1"
+solana-program = "2.2.1"
+solana-system-interface = { version = "1.0.0", features = ["bincode"] }
+hex = "0.4.3"
+thiserror = "2.0.16"
+solana-program-error = "2.2.2"
+solana-client = "2.2.7"
+tokio = "1.46.1"
+anyhow = "1.0.98"
+solana-transaction-status-client-types = "2.2.7"
+clap = { version = "4.5.45", features = ["derive"] }
+solana-sdk = "2.2.1"
 spl-token = { version = "8.0.0", features = ["no-entrypoint"]}
 spl-associated-token-account = { version = "7.0.0", features = ["no-entrypoint"] }
 spl-associated-token-account-client = "2.0.0"

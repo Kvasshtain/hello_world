@@ -11,7 +11,7 @@ use {
 };
 
 pub fn execute<'a>(
-    program_id: &Pubkey,
+    program_id: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     data: &'a [u8],
 ) -> ProgramResult {
