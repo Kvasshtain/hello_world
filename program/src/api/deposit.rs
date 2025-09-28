@@ -1,44 +1,22 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        config::{DATA_SIZE, WALLET_SEED},
         error::{
             Error,
-            Error::{AccountNotFound, CalculationOverflow},
+            Error::CalculationOverflow,
         },
     },
     solana_account_info::AccountInfo,
     solana_msg::msg,
-    solana_program::{
-        program::{invoke, invoke_signed},
-        rent::Rent,
-        system_program,
-        sysvar::Sysvar,
-    },
     solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
     solana_pubkey::PUBKEY_BYTES,
-    spl_associated_token_account::tools::account::create_pda_account,
-    spl_associated_token_account_client::{
-        address::get_associated_token_address_with_program_id,
-        instruction::create_associated_token_account,
-    },
-    spl_token::instruction::transfer,
-    std::collections::HashMap,
     std::mem,
 };
 use crate::State::State;
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-fn find_account<'a>(
-    all: &HashMap<Pubkey, &'a AccountInfo<'a>>,
-    key: Pubkey,
-) -> Result<&'a AccountInfo<'a>> {
-    let info: &AccountInfo = all.get(&key).cloned().ok_or(AccountNotFound(key))?;
-    Ok(info)
-}
 
 pub fn deposit<'a>(
     program: &'a Pubkey,
@@ -47,7 +25,7 @@ pub fn deposit<'a>(
 ) -> ProgramResult {
     msg!("deposit");
 
-    if data.len() <= PUBKEY_BYTES + mem::size_of::<u64>() {
+    if data.len() < PUBKEY_BYTES + mem::size_of::<u64>() {
         return Err(ProgramError::InvalidInstructionData);
     }
 

@@ -1,14 +1,14 @@
+use solana_msg::msg;
+use spl_associated_token_account_client::address::get_associated_token_address_and_bump_seed_internal;
 use {
     crate::{
-        accounts::{account_state::AccountState, Data},
         config::{DATA_SIZE, WALLET_SEED},
         error::{
             Error,
-            Error::{AccountNotFound, CalculationOverflow, InvalidSigner},
+            Error::{AccountNotFound, InvalidSigner},
         },
     },
     solana_account_info::AccountInfo,
-    solana_msg::msg,
     solana_program::{
         program::{invoke, invoke_signed},
         rent::Rent,
@@ -16,9 +16,7 @@ use {
         sysvar::Sysvar,
     },
     solana_program_entrypoint::ProgramResult,
-    solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
-    solana_pubkey::PUBKEY_BYTES,
     spl_associated_token_account::tools::account::create_pda_account,
     spl_associated_token_account_client::{
         address::get_associated_token_address_with_program_id,
@@ -26,7 +24,6 @@ use {
     },
     spl_token::instruction::transfer,
     std::collections::HashMap,
-    std::mem,
 };
 
 
@@ -56,7 +53,7 @@ impl<'a> State<'a> {
         let info: &AccountInfo = self.all.get(&key).cloned().ok_or(AccountNotFound(key))?;
         Ok(info)
     }
-
+    
     fn get_signer(map: &HashMap<Pubkey, &'a AccountInfo<'a>>) -> Result<&'a AccountInfo<'a>> {
         let mut signer = None;
 
@@ -171,7 +168,13 @@ impl<'a> State<'a> {
 
         let token_program = self.find_account(spl_token::ID)?;
 
-        let ata_user_wallet_key = get_associated_token_address_with_program_id(&self.signer.key, &mint.key, &spl_token::ID);
+        let (ata_user_wallet_key, _bump) =
+            get_associated_token_address_and_bump_seed_internal(
+                &self.signer.key,
+                &mint.key,
+                &spl_associated_token_account::ID,
+                &spl_token::ID,
+            );
 
         let ata_user_wallet = self.find_account(ata_user_wallet_key)?;
 
@@ -196,17 +199,4 @@ impl<'a> State<'a> {
 
         Ok(())
     }
-
-
-
-
-
-
-
-
-
-
-
-
-    
 }

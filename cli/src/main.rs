@@ -133,6 +133,13 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
             data.extend(mint.to_bytes());
             let (program_wallet_key, _bump) =
                 Pubkey::find_program_address(&[PROGRAM_WALLET_SEED], &program_id);
+            let (ata_user_wallet, _bump) =
+                get_associated_token_address_and_bump_seed_internal(
+                    &tx_sig.pubkey(),
+                    &mint,
+                    &spl_associated_token_account::ID,
+                    &spl_token::ID,
+                );
             let (ata_program_wallet_key, _bump) =
                 get_associated_token_address_and_bump_seed_internal(
                     &program_wallet_key,
@@ -145,7 +152,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
                 data,
                 &client,
                 tx_sig,
-                ata_program_wallet_key,
+                ata_user_wallet,
                 usr_pda_key,
                 program_wallet_key,
                 ata_program_wallet_key,
@@ -154,9 +161,10 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
                 mint,
             )
             .await?
-        } // TransactionType::CreateSpl => {
-          //     build_create_spl_tx(program_id, data, &client, tx_sig, ).await?
-          // }
+        } 
+        // TransactionType::CreateSpl => {
+        //     build_create_spl_tx(program_id, data, &client, tx_sig, ).await?
+        // }
     };
 
     println!("job has been done, solana signature: {}", sig);
