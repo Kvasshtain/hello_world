@@ -8,7 +8,7 @@ pub(crate) use {clap::Parser};
 pub struct Args {
     /// Hello_world program_id
     #[arg(long)]
-    pub program_id: String,
+    pub program_id: Pubkey,
     /// URL for Solana's JSON RPC: http://localhost:8899
     #[arg(long, default_value = "http://localhost:8899")]
     pub url: String,

@@ -42,9 +42,7 @@ pub fn deposit<'a>(
     let user_pda = state.get_user_pda()?;
 
     state.transfer(ata_wallet, mint_key, amount)?;
-
-    assert!(user_pda.is_writable);
-
+    
     let mut account_state = AccountState::from_account_mut(user_pda)?;
     account_state.balance = account_state
         .balance

@@ -1,7 +1,11 @@
 use {
     crate::api::{
-        allocate::allocate_account, assign::assign_account, create_spl::create_spl,
-        deposit::deposit, transfer::transfer, transfer_from::transfer_from, *,
+        allocate::allocate_account,
+        assign::assign_account,
+        deposit::deposit,
+        transfer::transfer,
+        transfer_from::transfer_from,
+        *,
     },
     solana_account_info::AccountInfo,
     solana_msg::msg,

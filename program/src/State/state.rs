@@ -85,8 +85,8 @@ impl<'a> State<'a> {
         create_pda_account(
             self.signer,
             &Rent::get()?,
-            DATA_SIZE,
-            self.program,
+            0,
+            sys_program.key,
             sys_program,
             wallet,
             &[WALLET_SEED, &[bump]],
@@ -124,7 +124,7 @@ impl<'a> State<'a> {
             wallet.clone(),
             mint.clone(),
             sys_program.clone(),
-            spl_ata_program.clone(),
+            spl_ata_program.clone(), //spl_token
         ];
 
         invoke(&ix, &infos)?;
