@@ -1,12 +1,11 @@
 pub mod accounts;
 pub mod api;
 pub mod config;
-mod entrypoint;
+pub mod entrypoint;
 pub mod error;
-pub mod executor;
-mod State;
+pub mod state;
 
-use api::*;
+pub use {api::*, instruction::*};
 
 entrypoint! {
     Create => create_account,

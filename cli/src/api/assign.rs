@@ -1,29 +1,20 @@
 use {
-    crate::{
-        transactions::build_tx,
-    },
+    crate::context::Context,
     anyhow::Result,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature
-        },
-    },
-    std::str::FromStr,
+    hello_world::Instruction,
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn assign(program_id: Pubkey,
-                    keypair: Keypair,
-                    client: &RpcClient,
-                    seed: String,
-                    pda_pubkey: String,
-) -> Result<Signature> {
-    let mut data = vec![5];
-    let seed = seed;
+pub async fn assign<'a>(context: Context<'a>, seed: String, owner: Pubkey) -> Result<Signature> {
+    let mut data = vec![Instruction::Assign as u8];
+
+    data.extend(owner.to_bytes());
+
     data.extend(seed.as_bytes());
-    let new: Pubkey = Pubkey::from_str(pda_pubkey.as_str())?;
-    build_tx(program_id, data, &client, keypair, new).await
+
+    let ix = context.compose_ix(&data.as_slice(), &[&owner]);
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

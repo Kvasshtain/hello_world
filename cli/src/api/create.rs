@@ -1,30 +1,29 @@
 use {
-    crate::transactions::build_tx,
+    crate::context::Context,
     anyhow::Result,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature,
-        },
-    },
-    std::str::FromStr,
+    hello_world::Instruction,
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn create(program_id: Pubkey,
-                    keypair: Keypair,
-                    client: &RpcClient,
-                    seed: String,
-                    size: u64,
-                    owner_pubkey: String
+pub async fn create<'a>(
+    context: Context<'a>,
+    seed: String,
+    size: u64,
+    owner: Pubkey,
 ) -> Result<Signature> {
-    let mut data = vec![0];
+    let mut data = vec![Instruction::Create as u8];
+
     data.extend(size.to_le_bytes());
-    data.extend(Pubkey::from_str(owner_pubkey.as_str())?.to_bytes());
-    let seed = seed;
+
+    data.extend(owner.to_bytes());
+
     data.extend(seed.as_bytes());
-    let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
-    build_tx(program_id, data, &client, keypair, new).await
+
+    let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &context.program_id);
+
+    let ix = context.compose_ix(&data.as_slice(), &[&new]);
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

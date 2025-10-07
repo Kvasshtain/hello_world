@@ -1,7 +1,7 @@
 pub mod account_state;
 
-use crate::error::Error::InvalidDataLength;
 use {
+    crate::error::Error::InvalidDataLength,
     solana_program::account_info::AccountInfo,
     std::{
         cell::{Ref, RefMut},
@@ -16,8 +16,6 @@ pub trait Data {
     type ItemMut<'a>;
     fn from_account<'a>(info: &'a AccountInfo) -> Result<Self::Item<'a>>;
     fn from_account_mut<'a>(info: &'a AccountInfo) -> Result<Self::ItemMut<'a>>;
-    fn size(info: &AccountInfo) -> usize;
-    fn offset(info: &AccountInfo) -> usize;
 }
 
 pub fn cast<'a, T>(info: &'a AccountInfo, offset: usize, len: usize) -> Result<Ref<'a, T>> {

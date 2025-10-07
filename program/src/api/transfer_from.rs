@@ -1,8 +1,10 @@
 use {
-    solana_account_info::{next_account_info, AccountInfo},
     solana_msg::msg,
+    solana_program::{
+        account_info::next_account_info, account_info::AccountInfo,
+        entrypoint_deprecated::ProgramResult,
+    },
     solana_program::{program::invoke_signed, system_instruction},
-    solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
     std::mem,

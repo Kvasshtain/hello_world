@@ -1,19 +1,19 @@
 use {
-    solana_account_info::{next_account_info, AccountInfo},
-    solana_msg::msg,
-    solana_program::{program::invoke, rent::Rent, sysvar::Sysvar},
-    solana_program::{program::invoke_signed, system_instruction},
-    solana_program_entrypoint::ProgramResult,
+    crate::state::State,
+    solana_program::{
+        account_info::AccountInfo, entrypoint_deprecated::ProgramResult, msg, program::invoke,
+        program::invoke_signed, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
+        sysvar::Sysvar,
+    },
     solana_program_error::ProgramError,
-    solana_pubkey::Pubkey,
     solana_system_interface::instruction::transfer,
     std::cmp::Ordering::*,
     std::mem,
 };
 
-pub fn allocate_account(
-    _program_id: &Pubkey,
-    accounts: &[AccountInfo],
+pub fn allocate_account<'a>(
+    program: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
     data: &[u8],
 ) -> ProgramResult {
     msg!("allocate_account");
@@ -26,20 +26,15 @@ pub fn allocate_account(
     let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
     let seed: &[u8] = seed_bytes.try_into().unwrap();
 
-    let iter = &mut accounts.iter();
+    let state = State::new(program, accounts)?;
 
-    let signer = next_account_info(iter)?;
-    let info = next_account_info(iter)?;
-    let system = next_account_info(iter)?;
+    let (key, bump) = Pubkey::find_program_address(&[seed], program);
 
-    // check if account has required length
-    if info.data_len() != 0usize {
-        return Err(ProgramError::InvalidInstructionData);
-    }
+    let signer = state.signer_info()?;
+    let info = state.get(key)?;
+    let system = state.get(system_program::ID)?;
 
     let allocate_ix = system_instruction::allocate(info.key, size);
-
-    let (_new_key, bump) = Pubkey::find_program_address(&[seed], _program_id);
 
     invoke_signed(
         &allocate_ix,

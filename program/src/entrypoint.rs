@@ -7,8 +7,8 @@ macro_rules! entrypoint {
                 solana_program::{
                     account_info::AccountInfo,
                     pubkey::Pubkey,
+                    entrypoint_deprecated::ProgramResult,
                 },
-                solana_program_entrypoint::ProgramResult,
                 solana_program_error::ProgramError,
             };
 

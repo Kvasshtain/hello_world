@@ -1,37 +1,26 @@
 use {
-    crate::transfer_from_transaction::build_transfer_from_tx,
+    crate::context::Context,
     anyhow::Result,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature,
-        },
-    },
-    std::str::FromStr,
+    hello_world::Instruction,
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn transfer_from(program_id: Pubkey,
-                           keypair: Keypair,
-                           client: &RpcClient,
-                           amount: u64,
-                           seed: String,
-                           from: String,
-                           to: String,
+pub async fn transfer_from<'a>(
+    context: Context<'a>,
+    amount: u64,
+    seed: String,
+    from: Pubkey,
+    to: Pubkey,
 ) -> Result<Signature> {
-    let mut data = vec![3];
+    let mut data = vec![Instruction::TransferFrom as u8];
+
     data.extend(amount.to_le_bytes());
-    let seed = seed;
+
     data.extend(seed.as_bytes());
-    let from = Pubkey::from_str(from.as_str())?;
-    build_transfer_from_tx(
-        program_id,
-        data,
-        &client,
-        keypair,
-        from,
-        Pubkey::from_str(to.as_str())?,
-    ).await
+
+    let ix = context.compose_ix(&data.as_slice(), &[&from, &to]);
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

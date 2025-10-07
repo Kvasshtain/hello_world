@@ -1,6 +1,4 @@
-use clap::{Subcommand};
-use solana_sdk::pubkey::Pubkey;
-pub(crate) use {clap::Parser};
+use {clap::Parser, clap::Subcommand, solana_sdk::pubkey::Pubkey};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -30,17 +28,17 @@ pub enum Cmd {
         /// New account size.
         size: u64,
         /// New account owner pubkey.
-        owner_pubkey: String,
+        owner: Pubkey,
     } = 0,
     Resize {
         /// Account new size.
         size: u64,
         /// PDA-account pubkey.
-        pda_pubkey: String,
+        pda: Pubkey,
     } = 1,
     Transfer {
         /// Destination account Id (To which transfer will be done)
-        to: String,
+        to: Pubkey,
         /// Lamports to send.
         amount: u64,
     } = 2,
@@ -48,9 +46,9 @@ pub enum Cmd {
         /// Seed for PDA.
         seed: String,
         /// Destination account Id (To which transfer will be done)
-        to: String,
+        to: Pubkey,
         /// Source account Id (From which transfer will be done)
-        from: String,
+        from: Pubkey,
         /// Lamports to send.
         amount: u64,
     } = 3,
@@ -63,13 +61,13 @@ pub enum Cmd {
     Assign {
         /// Seed for PDA.
         seed: String,
-        /// PDA-account pubkey.
-        pda_pubkey: String,
+        /// owner account pubkey.
+        owner: Pubkey,
     } = 5,
     Deposit {
         /// Tokens to send.
         amount: u64,
         /// Mint account pubkey.
-        mint: String,
+        mint: Pubkey,
     } = 6,
 }

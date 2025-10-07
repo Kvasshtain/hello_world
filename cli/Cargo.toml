@@ -14,4 +14,4 @@ spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-associated-token-account-client = { workspace = true }
 
-program-sdk = { path = "../program" }
+hello_world = { path = "../program" }

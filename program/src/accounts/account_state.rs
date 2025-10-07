@@ -1,6 +1,6 @@
 use {
     crate::accounts::{cast, cast_mut, Data},
-    solana_account_info::AccountInfo,
+    solana_program::account_info::AccountInfo,
     std::cell::{Ref, RefMut},
     std::mem::size_of,
 };
@@ -15,20 +15,12 @@ impl Data for AccountState {
     type ItemMut<'a> = RefMut<'a, Self>;
 
     fn from_account<'a>(info: &'a AccountInfo) -> crate::api::deposit::Result<Self::Item<'a>> {
-        cast(info, Self::offset(info), Self::size(info))
+        cast(info, 0, size_of::<Self>())
     }
 
     fn from_account_mut<'a>(
         info: &'a AccountInfo,
     ) -> crate::api::deposit::Result<Self::ItemMut<'a>> {
-        cast_mut(info, Self::offset(info), Self::size(info))
-    }
-
-    fn size(_info: &AccountInfo) -> usize {
-        size_of::<Self>()
-    }
-
-    fn offset(_info: &AccountInfo) -> usize {
-        0
+        cast_mut(info, 0, size_of::<Self>())
     }
 }

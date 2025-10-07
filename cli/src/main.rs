@@ -1,22 +1,12 @@
-mod deposit_transactions;
-mod instructions;
+mod api;
+mod context;
 mod program_option;
 mod transaction_data;
-mod transactions;
-mod transfer_from_transaction;
-mod api;
 
 use {
     crate::{
-        api::{
-            create,
-            resize,
-            transfer,
-            allocate,
-            assign,
-            deposit,
-            transfer_from,
-        },
+        api::{allocate, assign, create, deposit, resize, transfer, transfer_from},
+        context::Context,
         program_option::{Args, Cmd},
         transaction_data::show_tx_data,
     },
@@ -24,22 +14,11 @@ use {
     clap::Parser,
     solana_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
-        commitment_config::{
-            CommitmentConfig,
-            CommitmentLevel,
-        },
+        commitment_config::{CommitmentConfig, CommitmentLevel},
         pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature,
-            read_keypair_file
-        },
+        signature::{read_keypair_file, Keypair, Signature},
     },
-    std::{
-        path::Path,
-        str::FromStr,
-    },
+    std::{path::Path, str::FromStr},
 };
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
@@ -47,51 +26,28 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
 
     let program_id: Pubkey = args.program_id;
 
+    let state = Context::new(program_id, keypair, client)?;
+
     let sig = match args.cmd {
         Cmd::Create {
             seed,
             size,
-            owner_pubkey,
-        } => create(program_id, keypair, client, seed, size, owner_pubkey).await?,
-        Cmd::Resize {
-            size,
-            pda_pubkey,
-        } => resize(program_id, keypair, client, pda_pubkey, size).await?,
-        Cmd::Transfer {
-            amount,
-            to,
-        } => {
-            transfer(program_id, keypair, client, amount, to).await?
-        }
+            owner: owner_pubkey,
+        } => create(state, seed, size, owner_pubkey).await?,
+        Cmd::Resize { size, pda: pda } => resize(state, pda, size).await?,
+        Cmd::Transfer { amount, to } => transfer(state, amount, to).await?,
         Cmd::TransferFrom {
             amount,
             seed,
             from,
             to,
-        } => {
-            transfer_from(program_id, keypair, client, amount, seed, from, to).await?
-        }
-        Cmd::Allocate {
-            size,
-            seed,
-        } => {
-            allocate(program_id, keypair, client, seed, size,).await?
-        }
-        Cmd::Assign {
-            seed,
-            pda_pubkey,
-        } => {
-            assign(program_id, keypair, client, seed, pda_pubkey,).await?
-        }
-        Cmd::Deposit {
-            amount,
-            mint,
-        } => {
-            deposit(program_id, keypair, client, amount, mint).await?
-        }
+        } => transfer_from(state, amount, seed, from, to).await?,
+        Cmd::Allocate { size, seed } => allocate(state, seed, size).await?,
+        Cmd::Assign { seed, owner } => assign(state, seed, owner).await?,
+        Cmd::Deposit { amount, mint } => deposit(state, amount, mint).await?,
     };
 
-    println!("job has been done, solana signature: {}", sig);
+    println!("signature: {}", sig);
 
     Ok(sig)
 }

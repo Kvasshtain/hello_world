@@ -10,14 +10,11 @@ custom-heap = []
 
 
 [dependencies]
-solana-account-info = { workspace = true }
 solana-msg = { workspace = true }
-solana-program-entrypoint = { workspace = true }
 solana-pubkey = { workspace = true }
 solana-program = { workspace = true }
 solana-system-interface = { workspace = true }
 solana-program-error = { workspace = true }
-hex = { workspace = true }
 thiserror = { workspace = true }
 spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }

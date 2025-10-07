@@ -1,36 +1,36 @@
 use {
-    solana_account_info::{next_account_info, AccountInfo},
-    solana_msg::msg,
-    solana_program::{program::invoke_signed, system_instruction},
-    solana_program_entrypoint::ProgramResult,
+    crate::state::State,
+    solana_program::{
+        account_info::AccountInfo, entrypoint_deprecated::ProgramResult, msg,
+        program::invoke_signed, system_instruction,
+    },
     solana_program_error::ProgramError,
-    solana_pubkey::Pubkey,
+    solana_pubkey::{Pubkey, PUBKEY_BYTES},
 };
 
-pub fn assign_account(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+pub fn assign_account<'a>(
+    program: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    data: &[u8],
+) -> ProgramResult {
     msg!("assign_account");
 
-    let iter = &mut accounts.iter();
-
-    let _signer = next_account_info(iter)?;
-    let info = next_account_info(iter)?;
-    let _system = next_account_info(iter)?;
-
-    msg!("program_id: {}", program_id);
-
-    let (new_key, bump) = Pubkey::find_program_address(&[data], program_id);
-
-    if new_key != *info.key {
+    if data.len() <= PUBKEY_BYTES + 1 {
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    msg!("seed: {}", String::from_utf8(Vec::from(data)).unwrap());
-    msg!("new_key: {}", new_key);
-    msg!("*info.key: {}", *info.key);
-    msg!("*_system.key: {}", *_system.key);
+    let (owner_bytes, seed_bytes) = data.split_at(PUBKEY_BYTES);
+    let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
+    let seed: &[u8] = seed_bytes.try_into().unwrap();
+
+    let state = State::new(program, accounts)?;
+
+    let (key, bump) = Pubkey::find_program_address(&[seed], program);
+
+    let info = state.get(key)?;
 
     invoke_signed(
-        &system_instruction::assign(info.key, &program_id),
+        &system_instruction::assign(info.key, &owner),
         &[info.clone()],
         &[&[data, &[bump]]],
     )?;

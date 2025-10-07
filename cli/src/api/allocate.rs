@@ -1,29 +1,22 @@
 use {
-    crate::{
-        transactions::build_tx,
-    },
+    crate::context::Context,
     anyhow::Result,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature
-        },
-    },
+    hello_world::Instruction,
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn allocate(program_id: Pubkey,
-                      keypair: Keypair,
-                      client: &RpcClient,
-                      seed: String,
-                      size: u64,
-) -> Result<Signature> {
-    let mut data = vec![4];
+pub async fn allocate<'a>(context: Context<'a>, seed: String, size: u64) -> Result<Signature> {
+    let mut data = vec![Instruction::Alloc as u8];
+
     data.extend(size.to_le_bytes());
-    let seed = seed;
+
     data.extend(seed.as_bytes());
-    let (resized, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &program_id);
-    build_tx(program_id, data, &client, keypair, resized).await
+
+    let (resized, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &context.program_id);
+
+    let ix = context.compose_ix(&data.as_slice(), &[&resized]);
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

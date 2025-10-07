@@ -1,7 +1,9 @@
 use {
-    solana_account_info::{next_account_info, AccountInfo},
+    solana_program::{
+        account_info::next_account_info, account_info::AccountInfo,
+        entrypoint_deprecated::ProgramResult,
+    },
     solana_program::{msg, program::invoke_signed, rent::Rent, sysvar::Sysvar},
-    solana_program_entrypoint::ProgramResult,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
     solana_pubkey::PUBKEY_BYTES,

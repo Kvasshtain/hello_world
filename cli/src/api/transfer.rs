@@ -1,31 +1,18 @@
 use {
-    crate::transactions::build_tx,
+    crate::context::Context,
     anyhow::Result,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_sdk::{
-        pubkey::Pubkey,
-        signature::Signer,
-        signature::{
-            Keypair,
-            Signature,
-        },
-    },
-    std::str::FromStr,
+    hello_world::Instruction,
+    solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn transfer(program_id: Pubkey,
-                      keypair: Keypair,
-                      client: &RpcClient,
-                      amount: u64,
-                      to: String,
-) -> Result<Signature> {
-    let mut data = vec![2];
+pub async fn transfer<'a>(context: Context<'a>, amount: u64, to: Pubkey) -> Result<Signature> {
+    let mut data = vec![Instruction::Transfer as u8];
+
     data.extend(amount.to_le_bytes());
-    build_tx(
-        program_id,
-        data,
-        &client,
-        keypair,
-        Pubkey::from_str(to.as_str())?,
-    ).await
+
+    let ix = context.compose_ix(&data.as_slice(), &[&to]);
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }
