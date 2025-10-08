@@ -30,17 +30,12 @@ pub fn allocate_account<'a>(
 
     let (key, bump) = Pubkey::find_program_address(&[seed], program);
 
+    let ix = system_instruction::allocate(&key, size);
+
+    invoke_signed(&ix, &state.infos(&ix)?, &[&[seed, &[bump]]])?;
+
     let signer = state.signer_info()?;
     let info = state.get(key)?;
-    let system = state.get(system_program::ID)?;
-
-    let allocate_ix = system_instruction::allocate(info.key, size);
-
-    invoke_signed(
-        &allocate_ix,
-        &[info.clone(), system.clone()],
-        &[&[seed, &[bump]]],
-    )?;
 
     let rent = Rent::get()?.minimum_balance(info.data_len());
 

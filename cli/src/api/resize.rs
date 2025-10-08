@@ -5,12 +5,16 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn resize<'a>(context: Context<'a>, pda: Pubkey, size: u64) -> Result<Signature> {
+pub async fn resize<'a>(context: Context<'a>, seed: String, size: u64) -> Result<Signature> {
     let mut data = vec![Instruction::Resize as u8];
 
     data.extend(size.to_le_bytes());
 
-    let ix = context.compose_ix(&data.as_slice(), &[&pda]);
+    data.extend(seed.as_bytes());
+
+    let (resized, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &context.program_id);
+
+    let ix = context.compose_ix(&data.as_slice(), &[&resized]);
 
     let tx = context.compose_tx(&[ix]).await?;
 

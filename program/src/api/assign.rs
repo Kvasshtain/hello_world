@@ -29,11 +29,9 @@ pub fn assign_account<'a>(
 
     let info = state.get(key)?;
 
-    invoke_signed(
-        &system_instruction::assign(info.key, &owner),
-        &[info.clone()],
-        &[&[data, &[bump]]],
-    )?;
+    let ix = system_instruction::assign(info.key, &owner);
+
+    invoke_signed(&ix, &state.infos(&ix)?, &[&[data, &[bump]]])?;
 
     Ok(())
 }

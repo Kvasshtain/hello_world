@@ -13,10 +13,7 @@ use {
     },
     solana_pubkey::Pubkey,
     spl_associated_token_account::tools::account::create_pda_account,
-    spl_associated_token_account_client::{
-        address::get_associated_token_address_with_program_id,
-        instruction::create_associated_token_account,
-    },
+    spl_associated_token_account_client::instruction::create_associated_token_account,
     std::collections::HashMap,
     std::mem,
 };
@@ -93,6 +90,8 @@ impl<'a> State<'a> {
             return Ok(pda);
         }
 
+        assert_eq!(pda.owner, owner);
+
         let sys_program = self.get(system_program::ID)?;
 
         create_pda_account(
@@ -120,17 +119,15 @@ impl<'a> State<'a> {
     }
 
     pub fn wallet_info(&self) -> Result<&'a AccountInfo<'a>> {
-        self.pda(WALLET_SEED, 0, self.get(system_program::ID)?.key)
+        self.pda(WALLET_SEED.as_bytes(), 0, self.get(system_program::ID)?.key)
     }
 
     pub fn aspl_info(&self, wallet: &AccountInfo<'a>, mint_key: Pubkey) -> Result<&'a Pubkey> {
-        // вернуть pubkey
         let mint = self.get(mint_key)?;
 
-        let ata_key =
-            get_associated_token_address_with_program_id(&wallet.key, &mint.key, &spl_token::ID);
+        let ata_key = Self::spl_ata(&wallet.key, &mint.key);
 
-        let ata_info = self.get(ata_key)?;
+        let ata_info = self.get(ata_key.0)?;
 
         if ata_info.owner == &spl_token::id() {
             return Ok(ata_info.key);

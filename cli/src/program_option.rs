@@ -29,19 +29,19 @@ pub enum Cmd {
         size: u64,
         /// New account owner pubkey.
         owner: Pubkey,
-    } = 0,
+    },
     Resize {
+        /// Seed for PDA.
+        seed: String,
         /// Account new size.
         size: u64,
-        /// PDA-account pubkey.
-        pda: Pubkey,
-    } = 1,
+    },
     Transfer {
         /// Destination account Id (To which transfer will be done)
         to: Pubkey,
         /// Lamports to send.
         amount: u64,
-    } = 2,
+    },
     TransferFrom {
         /// Seed for PDA.
         seed: String,
@@ -51,23 +51,23 @@ pub enum Cmd {
         from: Pubkey,
         /// Lamports to send.
         amount: u64,
-    } = 3,
+    },
     Allocate {
         /// Seed for PDA.
         seed: String,
         /// Account new size.
         size: u64,
-    } = 4,
+    },
     Assign {
         /// Seed for PDA.
         seed: String,
         /// owner account pubkey.
         owner: Pubkey,
-    } = 5,
+    },
     Deposit {
         /// Tokens to send.
         amount: u64,
         /// Mint account pubkey.
         mint: Pubkey,
-    } = 6,
+    },
 }

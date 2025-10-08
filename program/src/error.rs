@@ -14,6 +14,9 @@ pub enum Error {
     #[error("Signer not found, or more than one signer was found")]
     InvalidSigner,
 
+    #[error("Account is already owned")]
+    AlreadyOwned,
+
     #[error("An solana program error: {0}")]
     ProgramError(ProgramError),
 }

@@ -14,6 +14,8 @@ pub async fn transfer_from<'a>(
 ) -> Result<Signature> {
     let mut data = vec![Instruction::TransferFrom as u8];
 
+    data.extend(to.to_bytes());
+
     data.extend(amount.to_le_bytes());
 
     data.extend(seed.as_bytes());

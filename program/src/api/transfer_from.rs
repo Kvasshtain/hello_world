@@ -1,39 +1,44 @@
 use {
+    crate::{error::Error::AlreadyOwned, state::State},
     solana_msg::msg,
     solana_program::{
-        account_info::next_account_info, account_info::AccountInfo,
-        entrypoint_deprecated::ProgramResult,
+        account_info::AccountInfo, entrypoint_deprecated::ProgramResult, program::invoke_signed,
+        system_instruction, system_program,
     },
-    solana_program::{program::invoke_signed, system_instruction},
     solana_program_error::ProgramError,
-    solana_pubkey::Pubkey,
+    solana_pubkey::{Pubkey, PUBKEY_BYTES},
     std::mem,
 };
 
-pub fn transfer_from(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+pub fn transfer_from<'a>(
+    program: &'a Pubkey,
+    accounts: &'a [AccountInfo<'a>],
+    data: &[u8],
+) -> ProgramResult {
     msg!("transfer_from");
 
-    if data.len() <= mem::size_of::<u64>() {
+    if data.len() <= PUBKEY_BYTES + mem::size_of::<u64>() {
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let (amount_bytes, seed_bytes) = data.split_at(mem::size_of::<u64>());
+    let (to_bytes, rest) = data.split_at(PUBKEY_BYTES);
+    let to_pubkey = Pubkey::new_from_array(to_bytes.try_into().unwrap());
+    let (amount_bytes, seed_bytes) = rest.split_at(mem::size_of::<u64>());
     let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
     let seed: &[u8] = seed_bytes.try_into().unwrap();
 
-    let iter = &mut accounts.iter();
+    let state = State::new(program, accounts)?;
 
-    let payer = next_account_info(iter)?;
-    let from = next_account_info(iter)?;
-    let to = next_account_info(iter)?;
-    let system = next_account_info(iter)?;
+    let to = state.get(to_pubkey)?;
 
-    if from.owner == program_id && to.owner != program_id {
+    let (from_key, bump) = Pubkey::find_program_address(&[seed], program);
+    let from = state.get(from_key)?;
+
+    if from.owner == program {
         msg!("<<<borrow>>>");
-        let (from_key, _bump) = Pubkey::find_program_address(&[seed], program_id);
 
         if from_key != *from.key {
-            return Err(ProgramError::InvalidInstructionData);
+            return Err(ProgramError::from(AlreadyOwned));
         }
 
         **from.try_borrow_mut_lamports()? -= amount;
@@ -42,22 +47,15 @@ pub fn transfer_from(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8])
         return Ok(());
     }
 
-    if from.owner == system.key {
+    if from.owner == &system_program::ID {
         msg!("<<<transfer>>>");
-        let (from_key, bump) = Pubkey::find_program_address(&[seed], program_id);
 
-        if from_key != *from.key {
-            return Err(ProgramError::InvalidInstructionData);
-        }
+        let ix = system_instruction::transfer(from.key, to.key, amount);
 
-        invoke_signed(
-            &system_instruction::transfer(from.key, to.key, amount),
-            &[payer.clone(), from.clone(), to.clone()],
-            &[&[seed, &[bump]]],
-        )?;
+        invoke_signed(&ix, &state.infos(&ix)?, &[&[seed, &[bump]]])?;
 
         return Ok(());
     }
 
-    Err(ProgramError::InvalidInstructionData)
+    Err(ProgramError::from(AlreadyOwned))
 }

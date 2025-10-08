@@ -8,6 +8,8 @@ use {
 pub async fn transfer<'a>(context: Context<'a>, amount: u64, to: Pubkey) -> Result<Signature> {
     let mut data = vec![Instruction::Transfer as u8];
 
+    data.extend(to.to_bytes());
+
     data.extend(amount.to_le_bytes());
 
     let ix = context.compose_ix(&data.as_slice(), &[&to]);

@@ -5,7 +5,7 @@ pub mod entrypoint;
 pub mod error;
 pub mod state;
 
-pub use {api::*, instruction::*};
+pub use {api::*, instruction::*, state::*};
 
 entrypoint! {
     Create => create_account,
