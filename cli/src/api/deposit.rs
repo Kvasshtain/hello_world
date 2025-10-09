@@ -30,6 +30,7 @@ pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Res
             &program_wallet_key,
             &ata_program_wallet_key,
             &spl_token::ID,
+            &spl_associated_token_account::ID,
             &mint,
         ],
     );

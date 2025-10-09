@@ -90,8 +90,6 @@ impl<'a> State<'a> {
             return Ok(pda);
         }
 
-        assert_eq!(pda.owner, owner);
-
         let sys_program = self.get(system_program::ID)?;
 
         create_pda_account(

@@ -15,7 +15,7 @@ pub fn transfer<'a>(
 ) -> ProgramResult {
     msg!("transfer");
 
-    if data.len() <= PUBKEY_BYTES + mem::size_of::<u64>() {
+    if data.len() < PUBKEY_BYTES + mem::size_of::<u64>() {
         return Err(ProgramError::InvalidInstructionData);
     }
 

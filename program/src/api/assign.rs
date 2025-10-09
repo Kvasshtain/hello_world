@@ -27,11 +27,9 @@ pub fn assign_account<'a>(
 
     let (key, bump) = Pubkey::find_program_address(&[seed], program);
 
-    let info = state.get(key)?;
+    let ix = system_instruction::assign(&key, &owner);
 
-    let ix = system_instruction::assign(info.key, &owner);
-
-    invoke_signed(&ix, &state.infos(&ix)?, &[&[data, &[bump]]])?;
+    invoke_signed(&ix, &state.infos(&ix)?, &[&[seed, &[bump]]])?;
 
     Ok(())
 }
