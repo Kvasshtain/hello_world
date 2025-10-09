@@ -1,0 +1,1 @@
+pub const WALLET_SEED: &str = "PROGRAM_WALLET_SEED";
