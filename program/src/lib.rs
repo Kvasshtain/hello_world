@@ -10,9 +10,10 @@ pub use {api::*, instruction::*, state::*};
 entrypoint! {
     Create => create_account,
     Resize => resize_account,
-    Transfer => transfer,
-    TransferFrom => transfer_from,
+    Transfer => native_transfer,
+    TransferFrom => native_transfer_from,
     Alloc => allocate_account,
     Assign => assign_account,
     Deposit => deposit,
+    InternalTransfer => internal_transfer,
 }

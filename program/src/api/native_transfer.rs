@@ -8,7 +8,7 @@ use {
     std::mem,
 };
 
-pub fn transfer<'a>(
+pub fn native_transfer<'a>(
     program: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     data: &[u8],

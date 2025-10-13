@@ -9,14 +9,15 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Keypair},
 };
 
+#[derive(Clone)]
 pub struct Context<'a> {
     pub program_id: Pubkey,
-    pub keypair: Keypair,
+    pub keypair: &'a Keypair,
     pub client: &'a RpcClient,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(program_id: Pubkey, keypair: Keypair, client: &'a RpcClient) -> Result<Self> {
+    pub fn new(program_id: Pubkey, keypair: &'a Keypair, client: &'a RpcClient) -> Result<Self> {
         Ok(Self {
             program_id,
             keypair,
@@ -53,5 +54,11 @@ impl<'a> Context<'a> {
         tx.sign(&[&self.keypair], blockhash);
 
         Ok(tx)
+    }
+
+    pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Pubkey {
+        let (key, _bump) =
+            Pubkey::find_program_address(&[&user_key.to_bytes(), &mint.to_bytes()], &self.program_id);
+        key
     }
 }

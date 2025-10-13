@@ -12,8 +12,7 @@ pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Res
 
     data.extend(mint.to_bytes());
 
-    let (balance_key, _bump) =
-        Pubkey::find_program_address(&[&context.keypair.pubkey().to_bytes()], &context.program_id);
+    let balance_key = context.balance_info(&context.keypair.pubkey(), &mint);
 
     let (program_wallet_key, _bump) =
         Pubkey::find_program_address(&[WALLET_SEED.as_bytes()], &context.program_id);

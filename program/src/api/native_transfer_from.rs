@@ -10,7 +10,7 @@ use {
     std::mem,
 };
 
-pub fn transfer_from<'a>(
+pub fn native_transfer_from<'a>(
     program: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     data: &[u8],

@@ -6,7 +6,7 @@ use {
 };
 
 pub async fn transfer_from<'a>(
-    context: Context<'a>,
+    context: &Context<'a>,
     amount: u64,
     seed: String,
     from: Pubkey,

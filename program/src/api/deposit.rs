@@ -53,12 +53,12 @@ pub fn deposit<'a>(
 
     let state = State::new(program, accounts)?;
 
-    let wallet = state.wallet_info()?;
-
+    let wallet = state.wallet_info(mint_key)?;
+    
     let ata_wallet = state.aspl_info(wallet, mint_key)?;
 
-    let user_pda = state.balance_info()?;
-
+    let user_pda = state.balance_info(state.signer(), &mint_key)?;
+    
     transfer(&state, ata_wallet, mint_key, amount)?;
 
     let mut account_state = AccountState::from_account_mut(user_pda)?;
