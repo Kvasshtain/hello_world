@@ -15,4 +15,5 @@ entrypoint! {
     Alloc => allocate_account,
     Assign => assign_account,
     Deposit => deposit,
+    InternalTransfer => internal_transfer,
 }

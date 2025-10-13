@@ -1,12 +1,14 @@
 mod api;
 mod context;
 mod program_option;
+mod transaction_data;
 
 use {
     crate::{
-        api::{allocate, assign, create, deposit, resize, transfer, transfer_from},
+        api::{allocate, assign, create, deposit, resize, transfer, transfer_from, internal_transfer},
         context::Context,
         program_option::{Args, Cmd},
+        transaction_data::show_tx_data,
     },
     anyhow::Result,
     clap::Parser,
@@ -43,6 +45,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
         Cmd::Allocate { size, seed } => allocate(state, seed, size).await?,
         Cmd::Assign { seed, owner } => assign(state, seed, owner).await?,
         Cmd::Deposit { amount, mint } => deposit(state, amount, mint).await?,
+        Cmd::InternalTransfer { amount, mint, to } => internal_transfer(state, amount, mint, to).await?,
     };
 
     println!("signature: {}", sig);
@@ -64,6 +67,8 @@ async fn main() -> Result<()> {
     let sig = send_tx(args, &client).await?;
 
     println!("we have done it, solana signature: {}", sig);
+
+    show_tx_data(&client, sig).await?;
 
     Ok(())
 }

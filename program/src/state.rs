@@ -81,8 +81,8 @@ impl<'a> State<'a> {
             .collect::<Result<Vec<AccountInfo>>>()
     }
 
-    fn pda(&self, seeds: &[u8], size: usize, owner: &Pubkey) -> Result<&'a AccountInfo<'a>> {
-        let (key, bump) = Pubkey::find_program_address(&[seeds], self.program_id);
+    fn pda(&self, seeds: &[&[u8]], size: usize, owner: &Pubkey) -> Result<&'a AccountInfo<'a>> {
+        let (key, bump) = Pubkey::find_program_address(seeds, self.program_id);
 
         let pda = self.get(key)?;
 
@@ -92,6 +92,15 @@ impl<'a> State<'a> {
 
         let sys_program = self.get(system_program::ID)?;
 
+        let b = &[bump];
+
+        let mut a = seeds
+            .iter()
+            .map(|&x| x)
+            .collect::<Vec<_>>();
+
+        a.push(b);
+
         create_pda_account(
             self.signer,
             &Rent::get()?,
@@ -99,7 +108,7 @@ impl<'a> State<'a> {
             owner,
             sys_program,
             pda,
-            &[seeds, &[bump]],
+            &a,
         )?;
 
         Ok(pda)
@@ -116,8 +125,8 @@ impl<'a> State<'a> {
         )
     }
 
-    pub fn wallet_info(&self) -> Result<&'a AccountInfo<'a>> {
-        self.pda(WALLET_SEED.as_bytes(), 0, self.get(system_program::ID)?.key)
+    pub fn wallet_info(&self, mint: Pubkey) -> Result<&'a AccountInfo<'a>> {
+        self.pda(&[&WALLET_SEED.as_bytes()], 0, self.get(system_program::ID)?.key)
     }
 
     pub fn aspl_info(&self, wallet: &AccountInfo<'a>, mint_key: Pubkey) -> Result<&'a Pubkey> {
@@ -143,9 +152,9 @@ impl<'a> State<'a> {
         Ok(ata_info.key)
     }
 
-    pub fn balance_info(&self) -> Result<&'a AccountInfo<'a>> {
+    pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
         self.pda(
-            &self.signer.key.to_bytes(),
+            &[&user_key.to_bytes(), &mint.to_bytes()],
             mem::size_of::<AccountState>(),
             self.program_id,
         )
