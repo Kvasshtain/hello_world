@@ -5,7 +5,7 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn assign<'a>(context: Context<'a>, seed: String, owner: Pubkey) -> Result<Signature> {
+pub async fn assign<'a>(context: &Context<'a>, seed: String, owner: Pubkey) -> Result<Signature> {
     let mut data = vec![Instruction::Assign as u8];
 
     data.extend(owner.to_bytes());

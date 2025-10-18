@@ -70,4 +70,10 @@ pub enum Cmd {
         /// Mint account pubkey.
         mint: Pubkey,
     },
+    Distribute {
+        /// Additional Seed for PDAs.
+        seed: String,
+        /// Lamports to send.
+        amount: u64,
+    }
 }

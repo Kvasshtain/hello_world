@@ -15,3 +15,4 @@ spl-associated-token-account = { workspace = true }
 spl-associated-token-account-client = { workspace = true }
 
 hello_world = { path = "../program" }
+futures-util = "0.3.31"
