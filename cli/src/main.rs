@@ -4,7 +4,7 @@ mod program_option;
 
 use {
     crate::{
-        api::{allocate, assign, create, deposit, resize, transfer, transfer_from},
+        api::{allocate, assign, create, deposit, resize, transfer, transfer_from, distribute},
         context::Context,
         program_option::{Args, Cmd},
     },
@@ -31,18 +31,19 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
             seed,
             size,
             owner: owner_pubkey,
-        } => create(state, seed, size, owner_pubkey).await?,
-        Cmd::Resize { size, seed } => resize(state, seed, size).await?,
-        Cmd::Transfer { amount, to } => transfer(state, amount, to).await?,
+        } => create(&state, seed, size, owner_pubkey).await?,
+        Cmd::Resize { size, seed } => resize(&state, seed, size).await?,
+        Cmd::Transfer { amount, to } => transfer(&state, amount, to).await?,
         Cmd::TransferFrom {
             amount,
             seed,
             from,
             to,
-        } => transfer_from(state, amount, seed, from, to).await?,
-        Cmd::Allocate { size, seed } => allocate(state, seed, size).await?,
-        Cmd::Assign { seed, owner } => assign(state, seed, owner).await?,
-        Cmd::Deposit { amount, mint } => deposit(state, amount, mint).await?,
+        } => transfer_from(&state, amount, seed, from, to).await?,
+        Cmd::Allocate { size, seed } => allocate(&state, seed, size).await?,
+        Cmd::Assign { seed, owner } => assign(&state, seed, owner).await?,
+        Cmd::Deposit { amount, mint } => deposit(&state, amount, mint).await?,
+        Cmd::Distribute { seed, amount } => distribute(&state, seed, amount).await?,
     };
 
     println!("signature: {}", sig);
