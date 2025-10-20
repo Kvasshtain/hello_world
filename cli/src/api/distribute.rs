@@ -25,7 +25,7 @@ pub async fn batch<'a>(
 
     let mut next_seeds: Vec<String> = seeds.clone();
 
-    for from_seed in seeds.clone() {
+    for from_seed in seeds.iter() {
 
         let (from, _bump): (Pubkey, u8) = Pubkey::find_program_address(&[&*from_seed.as_bytes()], &context.program_id);
 
