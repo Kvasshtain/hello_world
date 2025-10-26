@@ -5,7 +5,7 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn transfer<'a>(context: Context<'a>, amount: u64, to: Pubkey) -> Result<Signature> {
+pub async fn transfer<'a>(context: &Context<'a>, amount: u64, to: Pubkey) -> Result<Signature> {
     let mut data = vec![Instruction::Transfer as u8];
 
     data.extend(to.to_bytes());
