@@ -11,7 +11,7 @@ pub async fn transfer_from<'a>(
     seed: String,
     from: Pubkey,
     to: Pubkey,
-) -> Result<Signature> {
+) -> Vec<Result<Signature>> {
     let mut data = vec![Instruction::TransferFrom as u8];
 
     data.extend(to.to_bytes());
@@ -22,7 +22,11 @@ pub async fn transfer_from<'a>(
 
     let ix = context.compose_ix(&data.as_slice(), &[&from, &to]);
 
-    let tx = context.compose_tx(&[ix]).await?;
+    let tx = context.compose_tx(&[ix]).await.unwrap();
 
-    Ok(context.client.send_and_confirm_transaction(&tx).await?)
+    vec![Ok(context
+        .client
+        .send_and_confirm_transaction(&tx)
+        .await
+        .unwrap())]
 }

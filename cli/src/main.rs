@@ -5,7 +5,10 @@ mod transaction_data;
 
 use {
     crate::{
-        api::{allocate, assign, create, deposit, resize, transfer, transfer_from, internal_transfer},
+        api::{
+            allocate, assign, create, deposit, distribute, internal_transfer, resize, transfer,
+            transfer_from,
+        },
         context::Context,
         program_option::{Args, Cmd},
         transaction_data::show_tx_data,
@@ -20,39 +23,38 @@ use {
     },
     std::{path::Path, str::FromStr},
 };
-use crate::api::distribute;
 
-pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
+pub async fn send_tx(args: Args, client: &RpcClient) -> Vec<Result<Signature>> {
     let keypair: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
 
     let program_id: Pubkey = args.program_id;
 
-    let context = Context::new(program_id, &keypair, client)?;
+    let context = Context::new(program_id, &keypair, client).unwrap();
 
-    let sig = match args.cmd {
+    let sigs = match args.cmd {
         Cmd::Create {
             seed,
             size,
             owner: owner_pubkey,
-        } => create(&context, seed, size, owner_pubkey).await?,
-        Cmd::Resize { size, seed } => resize(context, seed, size).await?,
-        Cmd::Transfer { amount, to } => transfer(&context, amount, to).await?,
+        } => create(&context, seed, size, owner_pubkey).await,
+        Cmd::Resize { size, seed } => resize(context, seed, size).await,
+        Cmd::Transfer { amount, to } => transfer(&context, amount, to).await,
         Cmd::TransferFrom {
             amount,
             seed,
             from,
             to,
-        } => transfer_from(&context, amount, seed, from, to).await?,
-        Cmd::Allocate { size, seed } => allocate(context, seed, size).await?,
-        Cmd::Assign { seed, owner } => assign(context, seed, owner).await?,
-        Cmd::Deposit { amount, mint } => deposit(context, amount, mint).await?,
-        Cmd::InternalTransfer { amount, mint, to } => internal_transfer(context, amount, mint, to).await?,
-        Cmd::Distribute { mint, count  } => distribute(context, mint, count).await?,
+        } => transfer_from(&context, amount, seed, from, to).await,
+        Cmd::Allocate { size, seed } => allocate(context, seed, size).await,
+        Cmd::Assign { seed, owner } => assign(context, seed, owner).await,
+        Cmd::Deposit { amount, mint } => deposit(context, amount, mint).await,
+        Cmd::InternalTransfer { amount, mint, to } => {
+            internal_transfer(context, amount, mint, to).await
+        }
+        Cmd::Distribute { mint, count } => distribute(context, mint, count).await,
     };
 
-    println!("signature: {}", sig);
-
-    Ok(sig)
+    sigs
 }
 
 #[tokio::main]
@@ -66,11 +68,11 @@ async fn main() -> Result<()> {
         },
     );
 
-    let sig = send_tx(args, &client).await?;
+    let sigs = send_tx(args, &client).await;
 
-    println!("we have done it, solana signature: {}", sig);
+    println!("we have done it");
 
-    show_tx_data(&client, sig).await?;
+    show_tx_data(&client, sigs).await?;
 
     Ok(())
 }

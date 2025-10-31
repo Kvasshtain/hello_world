@@ -94,10 +94,7 @@ impl<'a> State<'a> {
 
         let b = &[bump];
 
-        let mut a = seeds
-            .iter()
-            .map(|&x| x)
-            .collect::<Vec<_>>();
+        let mut a = seeds.iter().map(|&x| x).collect::<Vec<_>>();
 
         a.push(b);
 
@@ -126,7 +123,11 @@ impl<'a> State<'a> {
     }
 
     pub fn wallet_info(&self, mint: Pubkey) -> Result<&'a AccountInfo<'a>> {
-        self.pda(&[&WALLET_SEED.as_bytes()], 0, self.get(system_program::ID)?.key)
+        self.pda(
+            &[&WALLET_SEED.as_bytes()],
+            0,
+            self.get(system_program::ID)?.key,
+        )
     }
 
     pub fn aspl_info(&self, wallet: &AccountInfo<'a>, mint_key: Pubkey) -> Result<&'a Pubkey> {

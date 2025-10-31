@@ -83,5 +83,5 @@ pub enum Cmd {
         mint: Pubkey,
         /// Distributed accounts count
         count: u64,
-    }
+    },
 }

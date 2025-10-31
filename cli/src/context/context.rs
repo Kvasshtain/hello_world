@@ -57,8 +57,10 @@ impl<'a> Context<'a> {
     }
 
     pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Pubkey {
-        let (key, _bump) =
-            Pubkey::find_program_address(&[&user_key.to_bytes(), &mint.to_bytes()], &self.program_id);
+        let (key, _bump) = Pubkey::find_program_address(
+            &[&user_key.to_bytes(), &mint.to_bytes()],
+            &self.program_id,
+        );
         key
     }
 }
