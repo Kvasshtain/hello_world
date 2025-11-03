@@ -31,31 +31,32 @@ pub fn internal_transfer<'a>(
 
     let mint_key = Pubkey::new_from_array(mint_bytes.try_into().unwrap());
 
-    let to = Pubkey::new_from_array(to_bytes.try_into().unwrap());
+    // let to = Pubkey::new_from_array(to_bytes.try_into().unwrap());
+    let to_key = Pubkey::try_from(to_bytes).unwrap();
 
     let state = State::new(program, accounts)?;
 
-    msg!("to: {}", to);
+    //msg!("to: {}", to);
 
-    let signer_pda = state.balance_info(state.signer(), &mint_key)?;
+    let from_pda = state.balance_info(state.signer(), &mint_key)?;
 
-    let to_pda = state.balance_info(&to, &mint_key)?;
+    let to_pda = state.balance_info(&to_key, &mint_key)?;
 
-    let mut account_state = AccountState::from_account_mut(signer_pda)?;
+    let mut from = AccountState::from_account_mut(from_pda)?;
 
-    msg!("amount: {}", amount);
+    //msg!("amount: {}", amount);
 
-    let b = account_state.balance;
+    //let b = account_state.balance;
 
-    msg!("account_state.balance: {}", b);
+    //msg!("account_state.balance: {}", b);
 
-    account_state.balance = account_state
+    from.balance = from
         .balance
         .checked_sub(amount)
         .ok_or(CalculationOverflow)?;
 
-    let mut account_state = AccountState::from_account_mut(to_pda)?;
-    account_state.balance = account_state
+    let mut to = AccountState::from_account_mut(to_pda)?;
+    to.balance = to
         .balance
         .checked_add(amount)
         .ok_or(CalculationOverflow)?;

@@ -9,7 +9,7 @@ pub async fn deposit<'a>(
     context: Context<'a>,
     amount: u64,
     mint: Pubkey,
-) -> Vec<Result<Signature>> {
+) -> Result<Vec<Signature>> {
     let mut data = vec![Instruction::Deposit as u8];
 
     data.extend(amount.to_le_bytes());
@@ -40,9 +40,9 @@ pub async fn deposit<'a>(
 
     let tx = context.compose_tx(&[ix]).await.unwrap();
 
-    vec![Ok(context
+    Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
         .await
-        .unwrap())]
+        .unwrap()])
 }

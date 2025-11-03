@@ -1,6 +1,6 @@
 use {
     crate::{
-        api::{deposit, internal_transfer, transfer},
+        api::{deposit, internal_transfer, native_transfer},
         context::Context,
     },
     anyhow::Result,
@@ -17,11 +17,9 @@ pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     mut unfunded: Vec<Keypair>,
-) -> Vec<Result<Signature>> {
-    let mut ret_value: Vec<Result<Signature>> = vec![];
-
+) -> Result<Vec<Signature>> {
     if unfunded.is_empty() {
-        return ret_value;
+        return Ok(vec![]);
     }
 
     let to = unfunded.pop().unwrap();
@@ -34,59 +32,71 @@ pub async fn batch<'a>(
     let from_context = Context::new(context.program_id, context.keypair, context.client).unwrap();
     let to_context = Context::new(context.program_id, &to, context.client).unwrap();
 
-    ret_value.append(&mut internal_transfer(context, amount, mint, to.pubkey()).await);
+    if internal_transfer(context, amount, mint, to.pubkey()).await.is_err() {
+        return Err(anyhow::Error::msg("Internal error"));
+    }
 
     let fut1 = Box::pin(batch(from_context, mint, unfunded));
     let fut2 = Box::pin(batch(to_context, mint, next));
 
-    let results = futures_util::future::join_all(vec![fut1, fut2]).await;
+    let res = futures_util::future::join_all(vec![fut1, fut2])
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>>>();
 
-    for mut result in results {
-        ret_value.append(&mut result);
-    }
-
-    ret_value
+    res
 }
 
 pub async fn distribute<'a>(
     context: Context<'a>,
     mint: Pubkey,
     count: u64,
-) -> Vec<Result<Signature>> {
-    let mut ret_value: Vec<Result<Signature>> = vec![];
+) -> Result<Vec<Signature>> {
+    //let mut futures: Vec<_> = vec![];
+    //let mut accounts = vec![];
 
-    let mut futures: Vec<_> = vec![];
+    let mut accounts = (0..count)
+        .into_iter()
+        .map(|_| Keypair::new())
+            .collect::<Vec<_>>();
 
-    let mut accounts = vec![];
-    for _ in 0..count {
-        accounts.push(Keypair::new());
-        futures.push(transfer(
+    let acc = &mut accounts; //_!!!!!!!!!!!!
+
+    let futures = acc
+        .into_iter()
+        .map(|pair| native_transfer(
             &context,
             MIN_BALANCE,
-            accounts[accounts.len() - 1].pubkey(),
-        ));
+            pair.pubkey(),
+        ))
+        .collect::<Vec<_>>();
+
+    // for _ in 0..count {
+    //     accounts.push(Keypair::new());
+    //     futures.push(native_transfer(
+    //         &context,
+    //         MIN_BALANCE,
+    //         accounts[accounts.len() - 1].pubkey(),
+    //     ));
+    // }
+
+    if futures_util::future::join_all(futures).await.iter().any(Result::is_err) {
+        return Err(anyhow::Error::msg("Internal error"));
+    };
+
+    if deposit(context.clone(), count, mint).await.is_err() {
+        return Err(anyhow::Error::msg("Internal error"));
     }
-
-    let results = futures_util::future::join_all(futures).await;
-
-    for mut result in results {
-        ret_value.append(&mut result);
-    }
-
-    ret_value.append(&mut deposit(context.clone(), count, mint).await);
 
     let to = accounts.pop().unwrap();
 
-    ret_value.append(&mut internal_transfer(context.clone(), count, mint, to.pubkey()).await);
+    if internal_transfer(context.clone(), count, mint, to.pubkey()).await.is_err() {
+        return Err(anyhow::Error::msg("Internal error"));
+    }
 
-    ret_value.append(
-        &mut batch(
-            Context::new(context.program_id, &to, context.client).unwrap(),
-            mint,
-            accounts,
-        )
-        .await,
-    );
-
-    ret_value
+    batch(
+        Context::new(context.program_id, &to, context.client)?,
+        mint,
+        accounts,
+    ).await
 }

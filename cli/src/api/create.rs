@@ -10,7 +10,7 @@ pub async fn create<'a>(
     seed: String,
     size: u64,
     owner: Pubkey,
-) -> Vec<Result<Signature>> {
+) -> Result<Vec<Signature>> {
     let mut data = vec![Instruction::Create as u8];
 
     data.extend(size.to_le_bytes());
@@ -25,9 +25,9 @@ pub async fn create<'a>(
 
     let tx = context.compose_tx(&[ix]).await.unwrap();
 
-    vec![Ok(context
+    Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
         .await
-        .unwrap())]
+        .unwrap()])
 }

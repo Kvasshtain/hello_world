@@ -20,11 +20,11 @@ pub async fn read_transaction(
     Ok(client.get_transaction_with_config(&sig, config).await?)
 }
 
-pub async fn show_tx_data(client: &RpcClient, sigs: Vec<Result<Signature>>) -> Result<()> {
-    for sig in sigs.iter() {
-        println!("signature: {}", sig.as_ref().unwrap());
+pub async fn show_tx_log(client: &RpcClient, result: Result<Vec<Signature>>) -> Result<()> {
+    for sig in result?.iter() {
+        println!("signature: {}", sig);
 
-        let tx_data = read_transaction(client, sig.as_ref().unwrap()).await?;
+        let tx_data = read_transaction(client, sig).await?;
 
         println!("Transaction data is {:#?}", tx_data);
     }

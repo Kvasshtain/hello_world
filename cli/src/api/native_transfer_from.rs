@@ -5,13 +5,13 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn transfer_from<'a>(
+pub async fn native_transfer_from<'a>(
     context: &Context<'a>,
     amount: u64,
     seed: String,
     from: Pubkey,
     to: Pubkey,
-) -> Vec<Result<Signature>> {
+) -> Result<Vec<Signature>> {
     let mut data = vec![Instruction::TransferFrom as u8];
 
     data.extend(to.to_bytes());
@@ -24,9 +24,9 @@ pub async fn transfer_from<'a>(
 
     let tx = context.compose_tx(&[ix]).await.unwrap();
 
-    vec![Ok(context
+    Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
         .await
-        .unwrap())]
+        .unwrap()])
 }

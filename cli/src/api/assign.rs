@@ -9,7 +9,7 @@ pub async fn assign<'a>(
     context: Context<'a>,
     seed: String,
     owner: Pubkey,
-) -> Vec<Result<Signature>> {
+) -> Result<Vec<Signature>> {
     let mut data = vec![Instruction::Assign as u8];
 
     data.extend(owner.to_bytes());
@@ -22,9 +22,9 @@ pub async fn assign<'a>(
 
     let tx = context.compose_tx(&[ix]).await.unwrap();
 
-    vec![Ok(context
+    Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
         .await
-        .unwrap())]
+        .unwrap()])
 }
