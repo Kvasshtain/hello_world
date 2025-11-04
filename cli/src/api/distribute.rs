@@ -12,6 +12,7 @@ use {
 };
 
 const MIN_BALANCE: u64 = 1000000000;
+const BUNCH_SIZE: u64 = 10000;
 
 pub async fn batch<'a>(
     context: Context<'a>,
@@ -29,38 +30,41 @@ pub async fn batch<'a>(
 
     let amount = (next.len() + 1) as u64;
 
-    let from_context = Context::new(context.program_id, context.keypair, context.client).unwrap();
-    let to_context = Context::new(context.program_id, &to, context.client).unwrap();
+    let from_context = Context::new(context.program_id, context.keypair, context.client)?;
+    let to_context = Context::new(context.program_id, &to, context.client)?;
 
-    if internal_transfer(context, amount, mint, to.pubkey()).await.is_err() {
+    let result = internal_transfer(context, amount, mint, to.pubkey()).await;
+
+    if result.is_err() {
         return Err(anyhow::Error::msg("Internal error"));
     }
 
     let fut1 = Box::pin(batch(from_context, mint, unfunded));
     let fut2 = Box::pin(batch(to_context, mint, next));
 
-    let res = futures_util::future::join_all(vec![fut1, fut2])
+    let results = futures_util::future::join_all(vec![fut1, fut2])
         .await
         .into_iter()
-        .collect::<Result<Vec<_>>>();
+        .chain(std::iter::once(result))
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
-    res
+    Ok(results)
 }
 
-pub async fn distribute<'a>(
+async fn distribute_bunch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     count: u64,
 ) -> Result<Vec<Signature>> {
-    //let mut futures: Vec<_> = vec![];
-    //let mut accounts = vec![];
-
     let mut accounts = (0..count)
         .into_iter()
         .map(|_| Keypair::new())
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
-    let acc = &mut accounts; //_!!!!!!!!!!!!
+    let acc = &mut accounts;
 
     let futures = acc
         .into_iter()
@@ -70,15 +74,6 @@ pub async fn distribute<'a>(
             pair.pubkey(),
         ))
         .collect::<Vec<_>>();
-
-    // for _ in 0..count {
-    //     accounts.push(Keypair::new());
-    //     futures.push(native_transfer(
-    //         &context,
-    //         MIN_BALANCE,
-    //         accounts[accounts.len() - 1].pubkey(),
-    //     ));
-    // }
 
     if futures_util::future::join_all(futures).await.iter().any(Result::is_err) {
         return Err(anyhow::Error::msg("Internal error"));
@@ -99,4 +94,35 @@ pub async fn distribute<'a>(
         mint,
         accounts,
     ).await
+}
+
+pub async fn distribute<'a>(
+    context: Context<'a>,
+    mint: Pubkey,
+    count: u64,
+) -> Result<Vec<Signature>> {
+    if count <= BUNCH_SIZE {
+        return distribute_bunch(context, mint, count).await;
+    }
+
+    let fut1: Vec<_> = (0..count / BUNCH_SIZE)
+        .into_iter()
+        .map(async |_| {
+            distribute_bunch(context.clone(), mint, BUNCH_SIZE).await
+        })
+        .collect();
+
+    let fut2: Vec<_> = std::iter::once(0)
+        .map(async |_| {
+            distribute_bunch(context.clone(), mint, count - BUNCH_SIZE * (count / BUNCH_SIZE)).await
+        })
+        .collect();
+
+    Ok(futures_util::future::join_all(fut1).await
+        .into_iter()
+        .chain(futures_util::future::join_all(fut2).await.into_iter())
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>())
 }

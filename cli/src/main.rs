@@ -3,6 +3,7 @@ mod context;
 mod program_option;
 mod transaction_log;
 
+use spl_associated_token_account::processor::process_instruction;
 use {
     crate::{
         api::{
@@ -72,7 +73,9 @@ async fn main() -> Result<()> {
 
     println!("we have done it");
 
-    show_tx_log(&client, result).await?;
+    println!("sig count: {}", result?.len());
+
+    //show_tx_log(&client, result).await?;
 
     Ok(())
 }
