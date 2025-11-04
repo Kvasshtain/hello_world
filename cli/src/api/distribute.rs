@@ -18,6 +18,7 @@ pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     mut unfunded: Vec<Keypair>,
+    mut depth: u64,
 ) -> Result<Vec<Signature>> {
     if unfunded.is_empty() {
         return Ok(vec![]);
@@ -39,8 +40,15 @@ pub async fn batch<'a>(
         return Err(anyhow::Error::msg("Internal error"));
     }
 
-    let fut1 = Box::pin(batch(from_context, mint, unfunded));
-    let fut2 = Box::pin(batch(to_context, mint, next));
+    println!("depth: {}", depth);
+
+    depth += 1;
+
+    let fut1 = Box::pin(batch(from_context, mint, unfunded, depth));
+
+    depth += 1;
+
+    let fut2 = Box::pin(batch(to_context, mint, next, depth));
 
     let results = futures_util::future::join_all(vec![fut1, fut2])
         .await
@@ -50,6 +58,8 @@ pub async fn batch<'a>(
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
+
+
 
     Ok(results)
 }
@@ -93,6 +103,7 @@ async fn distribute_bunch<'a>(
         Context::new(context.program_id, &to, context.client)?,
         mint,
         accounts,
+        0
     ).await
 }
 

@@ -73,9 +73,9 @@ async fn main() -> Result<()> {
 
     println!("we have done it");
 
-    println!("sig count: {}", result?.len());
+    //println!("sig count: {}", result?.len());
 
-    //show_tx_log(&client, result).await?;
+    show_tx_log(&client, result).await?;
 
     Ok(())
 }
