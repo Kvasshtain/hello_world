@@ -2,13 +2,13 @@ mod api;
 mod context;
 mod program_option;
 mod transaction_log;
+mod accounts;
 
-use spl_associated_token_account::processor::process_instruction;
 use {
     crate::{
         api::{
             allocate, assign, create, deposit, distribute, internal_transfer, resize, native_transfer,
-            native_transfer_from,
+            native_transfer_from, full_distribute,
         },
         context::Context,
         program_option::{Args, Cmd},
@@ -53,6 +53,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Vec<Signature>> {
             internal_transfer(context, amount, mint, to).await
         }
         Cmd::Distribute { mint, count } => distribute(context, mint, count).await,
+        Cmd::FullDistribute { mint, count } => full_distribute(context, mint, count).await,
     };
 
     result

@@ -38,11 +38,10 @@ pub async fn deposit<'a>(
         ],
     );
 
-    let tx = context.compose_tx(&[ix]).await.unwrap();
+    let tx = context.compose_tx(&[ix]).await?;
 
     Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
-        .await
-        .unwrap()])
+        .await?])
 }

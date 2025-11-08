@@ -36,19 +36,23 @@ pub fn internal_transfer<'a>(
 
     let state = State::new(program, accounts)?;
 
-    //msg!("to: {}", to);
+    msg!("!!!!!!!!!to_key: {}", to_key);
 
     let from_pda = state.balance_info(state.signer(), &mint_key)?;
 
     let to_pda = state.balance_info(&to_key, &mint_key)?;
 
+    msg!("!!!!!!!!!to_pda.key: {}", to_pda.key);
+
     let mut from = AccountState::from_account_mut(from_pda)?;
 
-    //msg!("amount: {}", amount);
+    msg!("/////////////from_pda.key: {}", from_pda.key);
 
-    //let b = account_state.balance;
+    msg!("-------------amount: {}", amount);
 
-    //msg!("account_state.balance: {}", b);
+    let b = from.balance;
+
+    msg!("++++++++++++from.balance: {}", b);
 
     from.balance = from
         .balance

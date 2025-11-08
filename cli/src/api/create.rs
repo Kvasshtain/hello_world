@@ -23,11 +23,10 @@ pub async fn create<'a>(
 
     let ix = context.compose_ix(&data.as_slice(), &[&new]);
 
-    let tx = context.compose_tx(&[ix]).await.unwrap();
+    let tx = context.compose_tx(&[ix]).await?;
 
     Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
-        .await
-        .unwrap()])
+        .await?])
 }

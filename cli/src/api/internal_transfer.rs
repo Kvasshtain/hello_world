@@ -25,11 +25,10 @@ pub async fn internal_transfer<'a>(
 
     let ix = context.compose_ix(&data.as_slice(), &[&signer_key, &to_key]);
 
-    let tx = context.compose_tx(&[ix]).await.unwrap();
+    let tx = context.compose_tx(&[ix]).await?;
 
     Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
-        .await
-        .unwrap()])
+        .await?])
 }

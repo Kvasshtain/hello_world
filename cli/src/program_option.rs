@@ -84,4 +84,10 @@ pub enum Cmd {
         /// Distributed accounts count
         count: u64,
     },
+    FullDistribute {
+        /// Mint account pubkey.
+        mint: Pubkey,
+        /// Distributed accounts count
+        count: u64,
+    },
 }

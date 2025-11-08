@@ -22,11 +22,10 @@ pub async fn native_transfer_from<'a>(
 
     let ix = context.compose_ix(&data.as_slice(), &[&from, &to]);
 
-    let tx = context.compose_tx(&[ix]).await.unwrap();
+    let tx = context.compose_tx(&[ix]).await?;
 
     Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
-        .await
-        .unwrap()])
+        .await?])
 }

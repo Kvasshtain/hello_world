@@ -19,11 +19,10 @@ pub async fn native_transfer<'a>(
 
     let ix = context.compose_ix(&data.as_slice(), &[&to]);
 
-    let tx = context.compose_tx(&[ix]).await.unwrap();
+    let tx = context.compose_tx(&[ix]).await?;
 
     Ok(vec![context
         .client
         .send_and_confirm_transaction(&tx)
-        .await
-        .unwrap()])
+        .await?])
 }
