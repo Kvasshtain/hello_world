@@ -17,6 +17,6 @@ serial_test = { workspace = true }
 async-std = { workspace = true }
 
 hello_world = { path = "../program" }
+
 futures-util = "0.3.31"
-serde_json = "1.0.145"
-serde = { version = "1.0.226", features = ["derive"] }
+glob = "0.3.3"

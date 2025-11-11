@@ -1,28 +1,25 @@
-use solana_client::nonblocking::rpc_client::RpcClient;
 use {
     crate::{
-        api::{deposit, internal_transfer, native_transfer},
+        accounts::{account_state::AccountState, Data},
+        api::{internal_transfer, native_transfer},
         context::Context,
-        accounts::{account_state::AccountState, Data,}
     },
     anyhow::Result,
     solana_sdk::{
         pubkey::Pubkey,
-        signature::{Keypair, Signature, write_keypair_file},
+        signature::{write_keypair_file, Keypair, Signature},
         signer::Signer,
     },
     std::cell::RefCell,
 };
-use crate::transaction_log::read_transaction;
 
-const MIN_BALANCE: u64 = 1000000000;
+pub const MIN_BALANCE: u64 = 1000000000;
 const CHUNK_SIZE: usize = 10000;
 
 pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     mut unfunded: Vec<Keypair>,
-    mut depth: u64,
 ) -> Result<Vec<Signature>> {
     if unfunded.is_empty() {
         return Ok(vec![]);
@@ -41,16 +38,12 @@ pub async fn batch<'a>(
     let result = internal_transfer(context, amount, mint, to.pubkey()).await;
 
     if result.is_err() {
-        return Err(anyhow::Error::msg("Internal error 0"));
+        return Err(anyhow::Error::msg("Internal transfer error"));
     }
 
-    println!("depth: {}", depth);
+    let fut1 = Box::pin(batch(from_context, mint, unfunded));
 
-    depth += 1;
-
-    let fut1 = Box::pin(batch(from_context, mint, unfunded, depth));
-
-    let fut2 = Box::pin(batch(to_context, mint, next, depth));
+    let fut2 = Box::pin(batch(to_context, mint, next));
 
     let results = futures_util::future::join_all(vec![fut1, fut2])
         .await
@@ -73,39 +66,13 @@ async fn distribute_chunk<'a>(
 
     let futures = rec
         .into_iter()
-        .map(|pair| native_transfer(
-                &context,
-                MIN_BALANCE,
-                pair.pubkey(),
-                ))
+        .map(|pair| native_transfer(&context, MIN_BALANCE, pair.pubkey()))
         .collect::<Vec<_>>();
 
     let results = futures_util::future::join_all(futures).await;
 
-    //println!("&&&&&&&&&&&&&&&results.len(): {}", results.len());
-
-    //let res = results[0];
-
-    //println!("&&&&&&&&&&&&&&&results.len(): {:#?}", read_transaction(context.client, &results[0].unwrap()[0]).await.unwrap());
-
-    // results
-    //     .into_iter()
-    //     .map(|res| {
-    //         println!("&&&&&&&&&&&&&&&");
-    //         res
-    //             .into_iter()
-    //             .map(|v| {
-    //                 v
-    //                     .into_iter()
-    //                     .map(async |sig| {
-    //                         let data = read_transaction(context.client, &sig).await.unwrap();
-    //                         println!("*****************data: {:#?}", data)
-    //                     })
-    //             })
-    //     });
-
     if results.iter().any(Result::is_err) {
-        return Err(anyhow::Error::msg("Internal error 2"));
+        return Err(anyhow::Error::msg("Native transfer error"));
     };
 
     let count = recipients.len() as u64;
@@ -115,19 +82,19 @@ async fn distribute_chunk<'a>(
     let result = internal_transfer(context.clone(), count, mint, to.pubkey()).await;
 
     if result.is_err() {
-        return Err(anyhow::Error::msg("Internal error 3"));
+        return Err(anyhow::Error::msg("Internal transfer error"));
     }
 
-    let res = batch(
+    let mut sigs = result?;
+
+    let mut batch_sigs = batch(
         Context::new(context.program_id, &to, context.client)?,
         mint,
         recipients,
-        0
-    ).await;
+    )
+    .await?;
 
-    let mut sigs = res?;
-
-    sigs.append(&mut result?);
+    sigs.append(&mut batch_sigs);
 
     Ok(sigs)
 }
@@ -147,23 +114,17 @@ fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
     chunks
 }
 
-async fn get_balance<'a>(
-    context: Context<'a>,
-    mint: Pubkey,
-) -> Result<u64> {
-    let (pubkey, _bump) = Pubkey::find_program_address(&[&context.keypair.pubkey().to_bytes(), &mint.to_bytes()], &context.program_id);
-
-    println!("????????/pubkey: {}", pubkey);
+async fn get_balance<'a>(context: Context<'a>, mint: Pubkey) -> Result<u64> {
+    let (pubkey, _bump) = Pubkey::find_program_address(
+        &[&context.keypair.pubkey().to_bytes(), &mint.to_bytes()],
+        &context.program_id,
+    );
 
     let data = context.client.get_account_data(&pubkey).await?;
 
-    let data = data.as_slice();
+    let ref_cell = RefCell::new(data.as_slice());
 
-    let ref_cell = RefCell::new(data);
-
-    let data = ref_cell.borrow();
-
-    let account_state = AccountState::from_arr(data).await?;
+    let account_state = AccountState::from_arr(ref_cell.borrow()).await?;
 
     Ok(account_state.balance)
 }
@@ -173,15 +134,7 @@ pub async fn distribute<'a>(
     mint: Pubkey,
     count: u64,
 ) -> Result<Vec<Signature>> {
-
-    println!("context.keypair.pubkey(): {}", context.keypair.pubkey());
-
     let balance = get_balance(context.clone(), mint).await?;
-
-
-
-
-    println!("!!!!!balance: {}", balance);
 
     if balance != count {
         return Err(anyhow::Error::msg("Insufficient balance"));
@@ -197,20 +150,17 @@ pub async fn distribute<'a>(
         })
         .collect::<Vec<_>>();
 
-    let chunks = into_chunks(recipients, CHUNK_SIZE);
+    let sigs = futures_util::future::join_all(
+        into_chunks(recipients, CHUNK_SIZE)
+            .into_iter()
+            .map(async |chunk| distribute_chunk(context.clone(), mint, chunk).await),
+    )
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>>>()?
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
 
-    let mut results = vec![];
-
-    for chunk in chunks {
-        results.push(distribute_chunk(context.clone(), mint, chunk).await);
-    }
-
-    let res = results
-        .into_iter()
-        .collect::<Result<Vec<_>>>()?
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-
-    Ok(res)
+    Ok(sigs)
 }

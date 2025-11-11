@@ -25,8 +25,7 @@ pub async fn create<'a>(
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![context
-        .client
-        .send_and_confirm_transaction(&tx)
-        .await?])
+    Ok(vec![
+        context.client.send_and_confirm_transaction(&tx).await?,
+    ])
 }

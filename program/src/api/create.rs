@@ -25,9 +25,7 @@ pub fn create_account<'a>(
     let (owner_bytes, seed_bytes) = rest.split_at(PUBKEY_BYTES);
     let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
     let seed: &[u8] = seed_bytes.try_into().unwrap();
-
-    msg!("owner pubkey: {}", owner.to_string());
-
+    
     let state = State::new(program, accounts)?;
 
     let rent = Rent::get()?.minimum_balance(size);

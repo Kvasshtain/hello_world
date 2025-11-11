@@ -3,7 +3,6 @@ use {
     anyhow::Result,
     hello_world::Instruction,
     solana_sdk::{pubkey::Pubkey, signature::Signature},
-    std::sync::Arc,
 };
 
 pub async fn native_transfer<'a>(
@@ -21,8 +20,7 @@ pub async fn native_transfer<'a>(
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![context
-        .client
-        .send_and_confirm_transaction(&tx)
-        .await?])
+    Ok(vec![
+        context.client.send_and_confirm_transaction(&tx).await?,
+    ])
 }

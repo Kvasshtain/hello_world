@@ -1,13 +1,13 @@
 use {
-    anyhow::Result,
     crate::accounts::{cast, Data},
+    anyhow::Result,
     std::cell::Ref,
     std::mem::size_of,
 };
 
 #[repr(C, packed)]
 pub struct AccountState {
-    pub(crate) balance: u64,
+    pub balance: u64,
 }
 
 impl Data for AccountState {

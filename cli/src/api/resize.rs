@@ -18,8 +18,7 @@ pub async fn resize<'a>(context: Context<'a>, seed: String, size: u64) -> Result
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![context
-        .client
-        .send_and_confirm_transaction(&tx)
-        .await?])
+    Ok(vec![
+        context.client.send_and_confirm_transaction(&tx).await?,
+    ])
 }

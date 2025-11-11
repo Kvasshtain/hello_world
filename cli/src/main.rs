@@ -1,14 +1,14 @@
-mod api;
-mod context;
-mod program_option;
-mod transaction_log;
-mod accounts;
+pub mod accounts;
+pub mod api;
+pub mod context;
+pub mod program_option;
+pub mod transaction_log;
 
 use {
     crate::{
         api::{
-            allocate, assign, create, deposit, distribute, internal_transfer, resize, native_transfer,
-            native_transfer_from, full_distribute,
+            allocate, assign, create, deposit, distribute, full_distribute, internal_transfer,
+            native_transfer, native_transfer_from, resize,
         },
         context::Context,
         program_option::{Args, Cmd},
@@ -22,7 +22,7 @@ use {
         pubkey::Pubkey,
         signature::{read_keypair_file, Keypair, Signature},
     },
-    std::{path::Path, str::FromStr},
+    std::path::Path,
 };
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Vec<Signature>> {
@@ -73,8 +73,6 @@ async fn main() -> Result<()> {
     let result = send_tx(args, &client).await;
 
     println!("we have done it");
-
-    //println!("sig count: {}", result?.len());
 
     show_tx_log(&client, result).await?;
 

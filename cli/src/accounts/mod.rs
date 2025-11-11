@@ -13,7 +13,11 @@ pub trait Data {
     async fn from_arr<'a>(data: Ref<'a, &[u8]>) -> Result<Self::Item<'a>>;
 }
 
-pub async fn cast<'a, T: 'a>(data: Ref<'a, &[u8]>, offset: usize, len: usize) -> Result<Ref<'a, T>> {
+pub async fn cast<'a, T: 'a>(
+    data: Ref<'a, &[u8]>,
+    offset: usize,
+    len: usize,
+) -> Result<Ref<'a, T>> {
     assert_eq!(align_of::<T>(), 1);
 
     if data.len() < offset + len {
@@ -30,4 +34,3 @@ pub async fn cast<'a, T: 'a>(data: Ref<'a, &[u8]>, offset: usize, len: usize) ->
 
     Ok(state)
 }
-
