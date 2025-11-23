@@ -5,7 +5,7 @@ use {
     solana_sdk::{pubkey::Pubkey, signature::Signature},
 };
 
-pub async fn allocate<'a>(context: Context<'a>, seed: String, size: u64) -> Result<Vec<Signature>> {
+pub async fn allocate<'a>(context: Context<'a>, seed: String, size: u64) -> Result<Signature> {
     let mut data = vec![Instruction::Alloc as u8];
 
     data.extend(size.to_le_bytes());
@@ -18,7 +18,5 @@ pub async fn allocate<'a>(context: Context<'a>, seed: String, size: u64) -> Resu
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![
-        context.client.send_and_confirm_transaction(&tx).await?,
-    ])
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

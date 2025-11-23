@@ -11,7 +11,7 @@ pub async fn native_transfer_from<'a>(
     seed: String,
     from: Pubkey,
     to: Pubkey,
-) -> Result<Vec<Signature>> {
+) -> Result<Signature> {
     let mut data = vec![Instruction::TransferFrom as u8];
 
     data.extend(to.to_bytes());
@@ -24,7 +24,5 @@ pub async fn native_transfer_from<'a>(
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![
-        context.client.send_and_confirm_transaction(&tx).await?,
-    ])
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

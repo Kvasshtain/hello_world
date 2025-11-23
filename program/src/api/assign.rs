@@ -19,9 +19,8 @@ pub fn assign_account<'a>(
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let (owner_bytes, seed_bytes) = data.split_at(PUBKEY_BYTES);
-    let owner = Pubkey::new_from_array(owner_bytes.try_into().unwrap());
-    let seed: &[u8] = seed_bytes.try_into().unwrap();
+    let (owner_bytes, seed) = data.split_at(PUBKEY_BYTES);
+    let owner = Pubkey::try_from(owner_bytes).unwrap();
 
     let state = State::new(program, accounts)?;
 

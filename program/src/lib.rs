@@ -1,8 +1,12 @@
+#![allow(unexpected_cfgs)]
+
 pub mod accounts;
 pub mod api;
+mod base;
 pub mod config;
 pub mod entrypoint;
 pub mod error;
+mod seed;
 pub mod state;
 
 pub use {api::*, instruction::*, state::*};

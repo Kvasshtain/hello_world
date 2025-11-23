@@ -1,58 +1,51 @@
 use {
     crate::{
         accounts::account_state::AccountState,
-        config::WALLET_SEED,
+        base::Base,
+        config::{BALANCE_ACCOUNT, WALLET_SEED},
         error::{
             Error,
             Error::{AccountNotFound, InvalidSigner},
         },
+        seed::Seed,
     },
     solana_program::{
-        account_info::AccountInfo, instruction::Instruction, program::invoke, rent::Rent,
-        system_program, sysvar::Sysvar,
+        account_info::AccountInfo, instruction::Instruction, rent::Rent, system_program,
+        sysvar::Sysvar,
     },
     solana_pubkey::Pubkey,
     spl_associated_token_account::tools::account::create_pda_account,
-    spl_associated_token_account_client::instruction::create_associated_token_account,
-    std::collections::HashMap,
-    std::mem,
+    std::{collections::HashMap, mem, ops::Deref},
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct State<'a> {
-    program_id: &'a Pubkey,
+    pub base: Base<'a>,
     all: HashMap<Pubkey, &'a AccountInfo<'a>>,
-    signer: &'a AccountInfo<'a>,
+    pub signer: &'a AccountInfo<'a>,
+}
+
+impl<'a> Deref for State<'a> {
+    type Target = Base<'a>;
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'a> State<'a> {
-    pub fn new(program: &'a Pubkey, accounts: &'a [AccountInfo<'a>]) -> Result<Self> {
+    pub fn new(program_id: &'a Pubkey, accounts: &'a [AccountInfo<'a>]) -> Result<Self> {
         let all = HashMap::from_iter(accounts.iter().map(|a| *a.key).zip(accounts.iter()));
-        let signer = Self::signer_info_static(&all)?;
+        let signer = Self::signer_static(&all)?;
 
         Ok(Self {
-            program_id: program,
+            base: Base::new(program_id),
             all,
             signer,
         })
     }
 
-    pub fn signer(&self) -> &Pubkey {
-        self.signer.key
-    }
-
-    pub fn get(&self, key: Pubkey) -> Result<&'a AccountInfo<'a>> {
-        Ok(self.all.get(&key).cloned().ok_or(AccountNotFound(key))?)
-    }
-
-    pub fn signer_info(&self) -> Result<&'a AccountInfo<'a>> {
-        Self::signer_info_static(&self.all)
-    }
-
-    fn signer_info_static(
-        map: &HashMap<Pubkey, &'a AccountInfo<'a>>,
-    ) -> Result<&'a AccountInfo<'a>> {
+    fn signer_static(map: &HashMap<Pubkey, &'a AccountInfo<'a>>) -> Result<&'a AccountInfo<'a>> {
         let mut signer = None;
 
         for &info in map.values() {
@@ -65,6 +58,14 @@ impl<'a> State<'a> {
         }
 
         signer.ok_or(InvalidSigner)
+    }
+
+    pub fn get(&self, key: Pubkey) -> Result<&'a AccountInfo<'a>> {
+        self.all.get(&key).cloned().ok_or(AccountNotFound(key))
+    }
+
+    pub fn signer(&self) -> &AccountInfo<'a> {
+        self.signer
     }
 
     pub fn infos(&self, ix: &Instruction) -> Result<Vec<AccountInfo<'a>>> {
@@ -81,10 +82,13 @@ impl<'a> State<'a> {
             .collect::<Result<Vec<AccountInfo>>>()
     }
 
-    fn pda(&self, seeds: &[&[u8]], size: usize, owner: &Pubkey) -> Result<&'a AccountInfo<'a>> {
-        let (key, bump) = Pubkey::find_program_address(seeds, self.program_id);
-
-        let pda = self.get(key)?;
+    fn pda(
+        &self,
+        pubkey_bump_seeds: (Pubkey, u8, Seed),
+        size: usize,
+        owner: &Pubkey,
+    ) -> Result<&'a AccountInfo<'a>> {
+        let pda = self.get(pubkey_bump_seeds.0)?;
 
         if pda.owner != &system_program::ID {
             return Ok(pda);
@@ -92,9 +96,15 @@ impl<'a> State<'a> {
 
         let sys_program = self.get(system_program::ID)?;
 
-        let b = &[bump];
+        let b = &[pubkey_bump_seeds.1];
 
-        let mut a = seeds.iter().map(|&x| x).collect::<Vec<_>>();
+        let mut a = pubkey_bump_seeds
+            .2
+            .cast()
+            .as_slice()
+            .iter()
+            .map(|&x| x)
+            .collect::<Vec<_>>();
 
         a.push(b);
 
@@ -122,40 +132,45 @@ impl<'a> State<'a> {
         )
     }
 
-    pub fn wallet_info(&self, mint: Pubkey) -> Result<&'a AccountInfo<'a>> {
-        self.pda(
-            &[&WALLET_SEED.as_bytes()],
-            0,
-            self.get(system_program::ID)?.key,
-        )
+    pub fn wallet_pubkey_bump(program_id: &'a Pubkey, mint: &'a Pubkey) -> (Pubkey, u8, Seed) {
+        let seeds = Seed {
+            items: vec![WALLET_SEED.to_vec(), mint.as_ref().to_vec()],
+        };
+
+        let result = Pubkey::find_program_address(&seeds.cast().as_slice(), program_id);
+
+        (result.0, result.1, seeds)
     }
 
-    pub fn aspl_info(&self, wallet: &AccountInfo<'a>, mint_key: Pubkey) -> Result<&'a Pubkey> {
-        let mint = self.get(mint_key)?;
+    pub fn wallet_info(&self, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
+        let pubkey_bump_seeds = State::wallet_pubkey_bump(self.program_id, mint);
 
-        let ata_key = Self::spl_ata(&wallet.key, &mint.key);
+        self.pda(pubkey_bump_seeds, 0, &system_program::ID)
+    }
 
-        let ata_info = self.get(ata_key.0)?;
+    pub fn balance_pubkey_bump(
+        program_id: &'a Pubkey,
+        user_key: &'a Pubkey,
+        mint: &'a Pubkey,
+    ) -> (Pubkey, u8, Seed) {
+        let seeds = Seed {
+            items: vec![
+                BALANCE_ACCOUNT.to_vec(),
+                user_key.as_ref().to_vec(),
+                mint.as_ref().to_vec(),
+            ],
+        };
 
-        if ata_info.owner == &spl_token::id() {
-            return Ok(ata_info.key);
-        }
+        let result = Pubkey::find_program_address(&seeds.cast().as_slice(), program_id);
 
-        let ix = create_associated_token_account(
-            self.signer.key,
-            &wallet.key,
-            &mint.key,
-            &spl_token::ID,
-        );
-
-        invoke(&ix, &self.infos(&ix)?)?;
-
-        Ok(ata_info.key)
+        (result.0, result.1, seeds)
     }
 
     pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
+        let pubkey_bump_seeds = State::balance_pubkey_bump(self.program_id, user_key, mint);
+
         self.pda(
-            &[&user_key.to_bytes(), &mint.to_bytes()],
+            pubkey_bump_seeds,
             mem::size_of::<AccountState>(),
             self.program_id,
         )

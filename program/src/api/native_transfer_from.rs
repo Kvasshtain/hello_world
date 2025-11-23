@@ -1,5 +1,5 @@
 use {
-    crate::{error::Error::AlreadyOwned, state::State},
+    crate::{error::Error::WrongAccount, state::State},
     solana_msg::msg,
     solana_program::{
         account_info::AccountInfo, entrypoint_deprecated::ProgramResult, program::invoke_signed,
@@ -22,10 +22,9 @@ pub fn native_transfer_from<'a>(
     }
 
     let (to_bytes, rest) = data.split_at(PUBKEY_BYTES);
-    let to_pubkey = Pubkey::new_from_array(to_bytes.try_into().unwrap());
-    let (amount_bytes, seed_bytes) = rest.split_at(mem::size_of::<u64>());
+    let to_pubkey = Pubkey::try_from(to_bytes).unwrap();
+    let (amount_bytes, seed) = rest.split_at(mem::size_of::<u64>());
     let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
-    let seed: &[u8] = seed_bytes.try_into().unwrap();
 
     let state = State::new(program, accounts)?;
 
@@ -38,7 +37,7 @@ pub fn native_transfer_from<'a>(
         msg!("<<<borrow>>>");
 
         if from_key != *from.key {
-            return Err(ProgramError::from(AlreadyOwned));
+            return Err(ProgramError::from(WrongAccount));
         }
 
         **from.try_borrow_mut_lamports()? -= amount;
@@ -57,5 +56,5 @@ pub fn native_transfer_from<'a>(
         return Ok(());
     }
 
-    Err(ProgramError::from(AlreadyOwned))
+    Err(ProgramError::from(WrongAccount))
 }

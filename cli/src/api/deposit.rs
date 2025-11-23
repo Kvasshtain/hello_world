@@ -1,25 +1,21 @@
 use {
     crate::context::Context,
     anyhow::Result,
-    hello_world::{config::WALLET_SEED, Instruction, State},
+    hello_world::{Instruction, State},
     solana_sdk::{pubkey::Pubkey, signature::Signature, signature::Signer},
 };
 
-pub async fn deposit<'a>(
-    context: Context<'a>,
-    amount: u64,
-    mint: Pubkey,
-) -> Result<Vec<Signature>> {
+pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Result<Signature> {
     let mut data = vec![Instruction::Deposit as u8];
 
     data.extend(amount.to_le_bytes());
 
     data.extend(mint.to_bytes());
 
-    let balance_key = context.balance_info(&context.keypair.pubkey(), &mint);
+    let (balance_key, _bump, _seed) =
+        State::balance_pubkey_bump(&context.program_id, &context.keypair.pubkey(), &mint);
 
-    let (program_wallet_key, _bump) =
-        Pubkey::find_program_address(&[WALLET_SEED.as_bytes()], &context.program_id);
+    let (program_wallet_key, _bump, _seed) = State::wallet_pubkey_bump(&context.program_id, &mint);
 
     let (ata_user_wallet, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
 
@@ -40,7 +36,5 @@ pub async fn deposit<'a>(
 
     let tx = context.compose_tx(&[ix]).await?;
 
-    Ok(vec![
-        context.client.send_and_confirm_transaction(&tx).await?,
-    ])
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
 }

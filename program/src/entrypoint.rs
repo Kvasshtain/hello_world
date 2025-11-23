@@ -37,7 +37,7 @@ macro_rules! entrypoint {
                         n if n == Instruction::$row as u8 => $row::execute(p, a, &d[1..]),
                     )*
 
-                    other => {
+                    _other => {
                         Err(ProgramError::InvalidInstructionData)
                     }
                 }

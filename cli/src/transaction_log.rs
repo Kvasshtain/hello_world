@@ -20,14 +20,45 @@ pub async fn read_transaction(
     Ok(client.get_transaction_with_config(&sig, config).await?)
 }
 
-pub async fn show_tx_log(client: &RpcClient, result: Result<Vec<Signature>>) -> Result<()> {
-    for sig in result?.iter() {
-        println!("signature: {}", sig);
+pub enum SigEnum {
+    Fu(Signature),
+    Bar(Vec<Signature>),
+}
 
-        let tx_data = read_transaction(client, sig).await?;
-
-        println!("Transaction data is {:#?}", tx_data);
+impl From<Signature> for SigEnum {
+    fn from(s: Signature) -> Self {
+        SigEnum::Fu(s)
     }
+}
+impl From<Vec<Signature>> for SigEnum {
+    fn from(n: Vec<Signature>) -> Self {
+        SigEnum::Bar(n)
+    }
+}
+
+async fn show_tx_log_for_sig(sig: &Signature, client: &RpcClient) -> Result<()> {
+    println!("signature: {}", sig);
+
+    let tx_data = read_transaction(client, &sig).await?;
+
+    println!("Transaction data is {:#?}", tx_data);
 
     Ok(())
+}
+
+pub async fn show_tx_log(sig: &SigEnum, client: &RpcClient) -> Result<()> {
+    match sig {
+        SigEnum::Fu(sig) => show_tx_log_for_sig(sig, client).await,
+        SigEnum::Bar(sigs) => {
+            let futs = sigs
+                .iter()
+                .map(|sig| show_tx_log_for_sig(sig, client))
+                .collect::<Vec<_>>();
+
+            futures_util::future::join_all(futs)
+                .await
+                .into_iter()
+                .collect::<Result<()>>()
+        }
+    }
 }

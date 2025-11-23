@@ -27,13 +27,13 @@ pub fn internal_transfer<'a>(
 
     let (mint_bytes, to_bytes) = rest.split_at(PUBKEY_BYTES);
 
-    let mint_key = Pubkey::new_from_array(mint_bytes.try_into().unwrap());
+    let mint_key = Pubkey::try_from(mint_bytes).unwrap();
 
     let to_key = Pubkey::try_from(to_bytes).unwrap();
 
     let state = State::new(program, accounts)?;
 
-    let from_pda = state.balance_info(state.signer(), &mint_key)?;
+    let from_pda = state.balance_info(state.signer().key, &mint_key)?;
 
     let to_pda = state.balance_info(&to_key, &mint_key)?;
 

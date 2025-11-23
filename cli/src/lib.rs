@@ -1,4 +1,3 @@
-pub mod accounts;
 pub mod api;
 pub mod context;
 pub mod program_option;
