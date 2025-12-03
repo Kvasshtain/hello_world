@@ -1,7 +1,7 @@
 use {
     crate::context::Context,
     anyhow::Result,
-    hello_world::{config::WALLET_SEED, Instruction, State},
+    hello_world::{Instruction, State},
     solana_sdk::{pubkey::Pubkey, signature::Signature, signature::Signer},
 };
 
@@ -12,11 +12,10 @@ pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Res
 
     data.extend(mint.to_bytes());
 
-    let (balance_key, _bump) =
-        Pubkey::find_program_address(&[&context.keypair.pubkey().to_bytes()], &context.program_id);
+    let (balance_key, _bump, _seed) =
+        State::balance_pubkey_bump(&context.program_id, &context.keypair.pubkey(), &mint);
 
-    let (program_wallet_key, _bump) =
-        Pubkey::find_program_address(&[WALLET_SEED.as_bytes()], &context.program_id);
+    let (program_wallet_key, _bump, _seed) = State::wallet_pubkey_bump(&context.program_id, &mint);
 
     let (ata_user_wallet, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
 

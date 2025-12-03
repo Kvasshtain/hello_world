@@ -19,6 +19,7 @@ thiserror = { workspace = true }
 spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-associated-token-account-client = { workspace = true }
+borsh = "0.10.4"
 
 [lib]
 crate-type = ["cdylib", "lib"]

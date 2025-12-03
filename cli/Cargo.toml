@@ -12,6 +12,11 @@ clap = { workspace = true }
 solana-sdk = { workspace = true }
 spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
-spl-associated-token-account-client = { workspace = true }
+rstest = { workspace = true }
+serial_test = { workspace = true }
+async-std = { workspace = true }
 
 hello_world = { path = "../program" }
+
+futures-util = "0.3.31"
+glob = "0.3.3"

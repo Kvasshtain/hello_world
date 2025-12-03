@@ -2,8 +2,7 @@ use {
     crate::state::State,
     solana_program::{
         account_info::AccountInfo, entrypoint_deprecated::ProgramResult, msg, program::invoke,
-        program::invoke_signed, pubkey::Pubkey, rent::Rent, system_instruction, system_program,
-        sysvar::Sysvar,
+        program::invoke_signed, pubkey::Pubkey, rent::Rent, system_instruction, sysvar::Sysvar,
     },
     solana_program_error::ProgramError,
     solana_system_interface::instruction::transfer,
@@ -22,9 +21,8 @@ pub fn allocate_account<'a>(
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let (size_bytes, seed_bytes) = data.split_at(mem::size_of::<u64>());
+    let (size_bytes, seed) = data.split_at(mem::size_of::<u64>());
     let size = u64::from_le_bytes(size_bytes.try_into().unwrap());
-    let seed: &[u8] = seed_bytes.try_into().unwrap();
 
     let state = State::new(program, accounts)?;
 
@@ -34,7 +32,7 @@ pub fn allocate_account<'a>(
 
     invoke_signed(&ix, &state.infos(&ix)?, &[&[seed, &[bump]]])?;
 
-    let signer = state.signer_info()?;
+    let signer = state.signer();
     let info = state.get(key)?;
 
     let rent = Rent::get()?.minimum_balance(info.data_len());

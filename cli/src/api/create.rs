@@ -6,7 +6,7 @@ use {
 };
 
 pub async fn create<'a>(
-    context: Context<'a>,
+    context: &Context<'a>,
     seed: String,
     size: u64,
     owner: Pubkey,

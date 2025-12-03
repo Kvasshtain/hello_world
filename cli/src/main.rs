@@ -1,12 +1,17 @@
-mod api;
-mod context;
-mod program_option;
+pub mod api;
+pub mod context;
+pub mod program_option;
+pub mod transaction_log;
 
 use {
     crate::{
-        api::{allocate, assign, create, deposit, resize, transfer, transfer_from},
+        api::{
+            allocate, assign, create, deposit, distribute, full_distribute, internal_transfer,
+            native_transfer, native_transfer_from, resize,
+        },
         context::Context,
         program_option::{Args, Cmd},
+        transaction_log::{show_tx_log, SigEnum},
     },
     anyhow::Result,
     clap::Parser,
@@ -14,40 +19,53 @@ use {
     solana_sdk::{
         commitment_config::{CommitmentConfig, CommitmentLevel},
         pubkey::Pubkey,
-        signature::{read_keypair_file, Keypair, Signature},
+        signature::{read_keypair_file, Keypair},
     },
-    std::{path::Path, str::FromStr},
+    std::path::Path,
 };
 
-pub async fn send_tx(args: Args, client: &RpcClient) -> Result<Signature> {
+pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
     let keypair: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
 
     let program_id: Pubkey = args.program_id;
 
-    let state = Context::new(program_id, keypair, client)?;
+    let context = Context::new(program_id, &keypair, client)?;
 
-    let sig = match args.cmd {
+    let result: SigEnum = match args.cmd {
         Cmd::Create {
             seed,
             size,
             owner: owner_pubkey,
-        } => create(state, seed, size, owner_pubkey).await?,
-        Cmd::Resize { size, seed } => resize(state, seed, size).await?,
-        Cmd::Transfer { amount, to } => transfer(state, amount, to).await?,
+        } => create(&context, seed, size, owner_pubkey).await?.into(),
+        Cmd::Resize { size, seed } => resize(context, seed, size).await?.into(),
+        Cmd::Transfer { amount, to } => native_transfer(&context, amount, to).await?.into(),
         Cmd::TransferFrom {
             amount,
             seed,
             from,
             to,
-        } => transfer_from(state, amount, seed, from, to).await?,
-        Cmd::Allocate { size, seed } => allocate(state, seed, size).await?,
-        Cmd::Assign { seed, owner } => assign(state, seed, owner).await?,
-        Cmd::Deposit { amount, mint } => deposit(state, amount, mint).await?,
+        } => native_transfer_from(&context, amount, seed, from, to)
+            .await?
+            .into(),
+        Cmd::Allocate { size, seed } => allocate(context, seed, size).await?.into(),
+        Cmd::Assign { seed, owner } => assign(context, seed, owner).await?.into(),
+        Cmd::Deposit { amount, mint } => deposit(context, amount, mint).await?.into(),
+        Cmd::InternalTransfer { amount, mint, to } => {
+            internal_transfer(context, amount, mint, to).await?.into()
+        }
+        Cmd::Distribute {
+            mint,
+            count,
+            amount,
+        } => distribute(context, mint, count, amount).await?.into(),
+        Cmd::FullDistribute {
+            mint,
+            count,
+            amount,
+        } => full_distribute(context, mint, count, amount).await?.into(),
     };
 
-    println!("signature: {}", sig);
-
-    Ok(sig)
+    Ok(result)
 }
 
 #[tokio::main]
@@ -61,9 +79,11 @@ async fn main() -> Result<()> {
         },
     );
 
-    let sig = send_tx(args, &client).await?;
+    let result = send_tx(args, &client).await;
 
-    println!("we have done it, solana signature: {}", sig);
+    println!("we have done it");
+
+    show_tx_log(&result?, &client).await?;
 
     Ok(())
 }
