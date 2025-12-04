@@ -70,6 +70,12 @@ pub enum Cmd {
         /// Mint account pubkey.
         mint: Pubkey,
     },
+    Withdraw {
+        /// Tokens to withdraw.
+        amount: u64,
+        /// Mint account pubkey.
+        mint: Pubkey,
+    },
     InternalTransfer {
         /// Tokens to send.
         amount: u64,

@@ -13,19 +13,19 @@ use {
     solana_pubkey::Pubkey,
 };
 
-pub fn deposit<'a>(
+pub fn withdraw<'a>(
     program: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     data: &[u8],
 ) -> ProgramResult {
-    msg!("deposit");
+    msg!("withdraw");
 
     let data = deposit_withdraw_data(program, accounts, data)?;
 
     let ix = spl_token::instruction::transfer(
         &spl_token::ID,
-        &data.ata_user_wallet_key,
         &data.ata_wallet,
+        &data.ata_user_wallet_key,
         data.state.signer().key,
         &[],
         data.amount,
@@ -36,7 +36,7 @@ pub fn deposit<'a>(
     let mut account_state = AccountState::from_account_mut(data.user_pda)?;
     account_state.balance = account_state
         .balance
-        .checked_add(data.amount)
+        .checked_sub(data.amount)
         .ok_or(CalculationOverflow)?;
 
     Ok(())

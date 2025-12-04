@@ -11,6 +11,7 @@ use {
         signature::{Keypair, Signer},
         transaction::Transaction,
     },
+    solana_program::account_info::IntoAccountInfo,
     spl_associated_token_account::solana_program,
 };
 
@@ -64,8 +65,6 @@ impl<'a> Context<'a> {
     pub async fn get_balance(context: Context<'a>, mint: Pubkey) -> Result<u64> {
         let (pubkey, _bump, _seeds) =
             State::balance_pubkey_bump(&context.program_id, &context.keypair.pubkey(), &mint);
-
-        use solana_program::account_info::IntoAccountInfo;
 
         let acc = context.client.get_account(&pubkey).await?;
 

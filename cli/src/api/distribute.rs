@@ -4,15 +4,16 @@ use {
         context::Context,
     },
     anyhow::Result,
+    async_std::{io::WriteExt, fs::File},
     solana_sdk::{
         pubkey::Pubkey,
-        signature::{write_keypair_file, Keypair, Signature},
+        signature::{Keypair, Signature},
         signer::Signer,
     },
 };
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 10000;
+const CHUNK_SIZE: usize = 100;
 
 pub async fn batch<'a>(
     context: Context<'a>,
@@ -106,11 +107,34 @@ fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
     chunks
 }
 
+pub fn json_string(keypair: &Keypair) -> Result<String> {
+    let keypair_bytes = keypair.to_bytes();
+    let mut result = Vec::with_capacity(64 * 4 + 2);
+
+    result.push(b'[');
+
+    for (i, &num) in keypair_bytes.iter().enumerate() {
+        if i > 0 {
+            result.push(b',');
+        }
+
+        let num_str = num.to_string();
+        result.extend_from_slice(num_str.as_bytes());
+    }
+
+    result.push(b']');
+    result.push(b'\n');
+
+    let as_string = String::from_utf8(result)?;
+    Ok(as_string)
+}
+
 pub async fn distribute<'a>(
     context: Context<'a>,
     mint: Pubkey,
     count: u64,
     amount: u64,
+    mut file: File,
 ) -> Result<Vec<Signature>> {
     let balance = Context::get_balance(context.clone(), mint).await?;
 
@@ -118,15 +142,19 @@ pub async fn distribute<'a>(
         return Err(anyhow::Error::msg("Insufficient balance"));
     }
 
-    let recipients = (1..count)
+    let recipients =
+        (1..count)
         .into_iter()
-        .map(|i| {
+        .map(|_i| {
             let keypair = Keypair::new();
-            let file_name = format!("key_pairs/recipient{}.json", i);
-            let _ = write_keypair_file(&keypair, file_name);
             keypair
         })
         .collect::<Vec<_>>();
+
+    for recipient in recipients.iter().clone() {
+        let text_to_append = json_string(&recipient)?;
+        file.write_all(text_to_append.as_bytes()).await?;
+    }
 
     let sigs = futures_util::future::join_all(
         into_chunks(recipients, CHUNK_SIZE)

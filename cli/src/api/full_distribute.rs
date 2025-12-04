@@ -1,14 +1,16 @@
 use {
     crate::{
-        api::{deposit, distribute, internal_transfer, native_transfer, LAMPORTS},
+        api::{deposit, distribute, internal_transfer, native_transfer, json_string, LAMPORTS},
         context::Context,
     },
     anyhow::Result,
+    futures_util::AsyncWriteExt,
     solana_sdk::{
         pubkey::Pubkey,
-        signature::{write_keypair_file, Keypair, Signature},
+        signature::{Keypair, Signature},
         signer::Signer,
     },
+    async_std::fs::{OpenOptions, File},
 };
 
 pub async fn full_distribute<'a>(
@@ -21,9 +23,19 @@ pub async fn full_distribute<'a>(
 
     let genesis = Keypair::new();
 
-    let file_name = format!("key_pairs/recipient{}.json", 0);
+    let file_name = "key_pairs/recipients.json";
 
-    let _ = write_keypair_file(&genesis, file_name);
+    let text_to_append = json_string(&genesis)?;
+
+    tokio::fs::File::create(file_name).await?;
+
+    let mut file: File = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(file_name)
+        .await?;
+
+    file.write_all(text_to_append.as_bytes()).await?;
 
     let _ = native_transfer(&context, LAMPORTS * count, genesis.pubkey()).await;
 
@@ -31,5 +43,5 @@ pub async fn full_distribute<'a>(
 
     let genesis_context = Context::new(context.program_id, &genesis, context.client)?;
 
-    distribute(genesis_context, mint, count, amount).await
+    distribute(genesis_context, mint, count, amount, file).await
 }
