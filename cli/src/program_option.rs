@@ -75,6 +75,8 @@ pub enum Cmd {
         amount: u64,
         /// Mint account pubkey.
         mint: Pubkey,
+        /// Destination account Id (To which withdraw will be done)
+        to: Pubkey,
     },
     InternalTransfer {
         /// Tokens to send.

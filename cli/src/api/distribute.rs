@@ -1,25 +1,30 @@
 use {
     crate::{
-        api::{internal_transfer, native_transfer},
+        api::{
+            internal_transfer, native_internal_transfer::native_internal_transfer, native_transfer,
+        },
         context::Context,
     },
     anyhow::Result,
-    async_std::{io::WriteExt, fs::File},
+    futures_util::future::join_all,
     solana_sdk::{
         pubkey::Pubkey,
-        signature::{Keypair, Signature},
+        signature::{read_keypair_file, write_keypair_file, Keypair, Signature},
         signer::Signer,
     },
+    std::{path::Path, sync::Arc},
+    tokio::{sync::Semaphore, task::JoinHandle},
 };
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 100;
+const CHUNK_SIZE: usize = 1000;
 
 pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     mut unfunded: Vec<Keypair>,
     amount: u64,
+    depth: u64,
 ) -> Result<Vec<Signature>> {
     if unfunded.is_empty() {
         return Ok(vec![]);
@@ -31,15 +36,18 @@ pub async fn batch<'a>(
     let next = unfunded.split_off(at);
 
     let new_amount = ((next.len() + 1) as u64) * amount;
+    let new_lamports = ((next.len() + 1) as u64) * LAMPORTS;
 
     let from_context = Context::new(context.program_id, context.keypair, context.client)?;
     let to_context = Context::new(context.program_id, &to, context.client)?;
 
-    let result = vec![internal_transfer(context, new_amount, mint, to.pubkey()).await?];
+    let result = vec![
+        native_internal_transfer(&context, new_lamports, new_amount, mint, to.pubkey()).await?,
+    ];
 
-    let fut1 = Box::pin(batch(from_context, mint, unfunded, amount));
+    let fut1 = Box::pin(batch(from_context, mint, unfunded, amount, depth + 1));
 
-    let fut2 = Box::pin(batch(to_context, mint, next, amount));
+    let fut2 = Box::pin(batch(to_context, mint, next, amount, depth + 1));
 
     let results = futures_util::future::join_all(vec![fut1, fut2])
         .await
@@ -59,22 +67,11 @@ async fn distribute_chunk<'a>(
     mut recipients: Vec<Keypair>,
     amount: u64,
 ) -> Result<Vec<Signature>> {
-    let rec = &mut recipients;
-
-    let futures = rec
-        .into_iter()
-        .map(|pair| native_transfer(&context, LAMPORTS, pair.pubkey()))
-        .collect::<Vec<_>>();
-
-    futures_util::future::join_all(futures)
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>>>()?;
-
     let count = recipients.len() as u64;
 
     let to = recipients.pop().unwrap();
 
+    let _ = native_transfer(&context, count * LAMPORTS, to.pubkey()).await?;
     let result = internal_transfer(context.clone(), count * amount, mint, to.pubkey()).await?;
 
     let mut sigs = vec![result];
@@ -84,6 +81,7 @@ async fn distribute_chunk<'a>(
         mint,
         recipients,
         amount,
+        0,
     )
     .await?;
 
@@ -107,26 +105,37 @@ fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
     chunks
 }
 
-pub fn json_string(keypair: &Keypair) -> Result<String> {
-    let keypair_bytes = keypair.to_bytes();
-    let mut result = Vec::with_capacity(64 * 4 + 2);
+async fn save_recipients(
+    tasks: usize,
+    recipients: Vec<Keypair>,
+) -> (Vec<JoinHandle<()>>, Vec<String>) {
+    let semaphore = Arc::new(Semaphore::new(tasks));
 
-    result.push(b'[');
+    let mut jh = vec![];
 
-    for (i, &num) in keypair_bytes.iter().enumerate() {
-        if i > 0 {
-            result.push(b',');
-        }
+    let mut i = 0;
 
-        let num_str = num.to_string();
-        result.extend_from_slice(num_str.as_bytes());
+    let mut paths: Vec<String> = vec![];
+
+    for recipient in recipients {
+        let semaphore = Arc::clone(&semaphore);
+        let permit = semaphore.acquire_owned().await.unwrap();
+
+        i = i + 1;
+
+        let path = format!("./key_pairs/recipient{}.json", i);
+        paths.push(path.clone());
+
+        let file_name = path;
+
+        let handle = tokio::spawn(async move {
+            let _ = write_keypair_file(&recipient, file_name);
+            drop(permit);
+        });
+
+        jh.push(handle);
     }
-
-    result.push(b']');
-    result.push(b'\n');
-
-    let as_string = String::from_utf8(result)?;
-    Ok(as_string)
+    (jh, paths)
 }
 
 pub async fn distribute<'a>(
@@ -134,7 +143,6 @@ pub async fn distribute<'a>(
     mint: Pubkey,
     count: u64,
     amount: u64,
-    mut file: File,
 ) -> Result<Vec<Signature>> {
     let balance = Context::get_balance(context.clone(), mint).await?;
 
@@ -142,8 +150,7 @@ pub async fn distribute<'a>(
         return Err(anyhow::Error::msg("Insufficient balance"));
     }
 
-    let recipients =
-        (1..count)
+    let recipients = (0..count - 1)
         .into_iter()
         .map(|_i| {
             let keypair = Keypair::new();
@@ -151,22 +158,26 @@ pub async fn distribute<'a>(
         })
         .collect::<Vec<_>>();
 
-    for recipient in recipients.iter().clone() {
-        let text_to_append = json_string(&recipient)?;
-        file.write_all(text_to_append.as_bytes()).await?;
+    let (tasks, paths) = save_recipients(16, recipients).await;
+
+    let _results = join_all(tasks).await;
+
+    let mut recipients = vec![];
+
+    for path_str in paths {
+        let path = Path::new(&path_str);
+
+        let keypair: Keypair = read_keypair_file(path).unwrap();
+        recipients.push(keypair);
     }
 
-    let sigs = futures_util::future::join_all(
-        into_chunks(recipients, CHUNK_SIZE)
-            .into_iter()
-            .map(async |chunk| distribute_chunk(context.clone(), mint, chunk, amount).await),
-    )
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>>>()?
-    .into_iter()
-    .flatten()
-    .collect::<Vec<_>>();
+    let mut sigs = vec![];
+
+    for i in into_chunks(recipients, CHUNK_SIZE) {
+        sigs.push(distribute_chunk(context.clone(), mint, i, amount).await?)
+    }
+
+    let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();
 
     Ok(sigs)
 }

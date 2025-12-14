@@ -6,15 +6,14 @@ pub mod transaction_log;
 use {
     crate::{
         api::{
-            allocate, assign, create, deposit, withdraw, distribute, full_distribute, internal_transfer,
-            native_transfer, native_transfer_from, resize,
+            allocate, assign, create, deposit, distribute, full_distribute, internal_transfer,
+            native_transfer, native_transfer_from, resize, withdraw,
         },
         context::Context,
         program_option::{Args, Cmd},
         transaction_log::{show_tx_log, SigEnum},
     },
     anyhow::Result,
-    async_std::fs::File,
     clap::Parser,
     solana_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
@@ -51,7 +50,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
         Cmd::Allocate { size, seed } => allocate(context, seed, size).await?.into(),
         Cmd::Assign { seed, owner } => assign(context, seed, owner).await?.into(),
         Cmd::Deposit { amount, mint } => deposit(context, amount, mint).await?.into(),
-        Cmd::Withdraw { amount, mint } => withdraw(context, amount, mint).await?.into(),
+        Cmd::Withdraw { amount, mint, to } => withdraw(context, amount, mint, to).await?.into(),
         Cmd::InternalTransfer { amount, mint, to } => {
             internal_transfer(context, amount, mint, to).await?.into()
         }
@@ -59,7 +58,7 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
             mint,
             count,
             amount,
-        } => distribute(context, mint, count, amount, File::create("key_pairs/recipients.json").await?).await?.into(),
+        } => distribute(context, mint, count, amount).await?.into(),
         Cmd::FullDistribute {
             mint,
             count,
