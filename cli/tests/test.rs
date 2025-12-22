@@ -60,7 +60,7 @@ async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
         &spl_token::ID,
     );
 
-    let amount = 100_00;
+    let amount = 1_000_000_000;
 
     let mint_to_instruction = mint_to(
         &spl_token::ID,
@@ -92,8 +92,12 @@ async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
     mint
 }
 
-#[rstest(count, case::coun_1(500))]
-async fn test(count: u64) {
+#[rstest]
+#[serial_test::serial]
+//#[case(500)]
+//#[case(5000)]
+#[case(50000)]
+async fn test(#[case] count: u64) {
     let url = "http://localhost:8899";
 
     let client = RpcClient::new_with_commitment(
@@ -112,6 +116,8 @@ async fn test(count: u64) {
     let program_id = Pubkey::from_str("Dfjw9nvSTnidg32X8VJNCK3GD1WuQVsz1EhbyrKDwt2j").unwrap();
 
     let mint_pubkey = mint.pubkey();
+    println!("mint_pubkey!!!!! = {}", mint_pubkey);
+    //let mint_pubkey = Pubkey::from_str("GPuA19jNYX76DYz9Vdw87xvSqXoKUjo239KvdXAm2c8C").unwrap(); //Delete!!!!!!
 
     let context = Context::new(program_id, &keypair, &client).unwrap();
 
@@ -121,17 +127,27 @@ async fn test(count: u64) {
 
     let dir = fs::read_dir("./key_pairs").unwrap();
 
+    let mut count: u64 = 0; //Delete!!!!!!
+
     for entry in dir {
+        println!("count = {}", count);
+
+        count = count + 1;
+
         let entry = entry.unwrap();
         let path = entry.path();
 
         let keypair: Keypair = read_keypair_file(path).unwrap();
+        println!("pubkey!!!!! = {}", keypair.pubkey());
 
         let context = Context::new(program_id, &keypair, &client).unwrap();
 
         let balance = Context::get_balance(context.clone(), mint_pubkey)
             .await
             .unwrap();
+
+        println!("balance {}", balance);
+        println!("amount {}", amount);
 
         assert_eq!(balance, amount);
     }

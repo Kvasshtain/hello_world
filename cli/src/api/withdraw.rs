@@ -28,22 +28,22 @@ pub async fn withdraw<'a>(
 
     data.extend(to.to_bytes());
 
-    let (balance_key, _bump, _seed) =
-        State::balance_pubkey_bump(&context.program_id, &context.keypair.pubkey(), &mint);
+    let (balance_key, _seed) =
+        State::balance_key(&context.program_id, &context.keypair.pubkey(), &mint);
 
-    let (program_wallet_key, _bump, _seed) = State::wallet_pubkey_bump(&context.program_id, &mint);
+    let (wallet, _seed) = State::wallet_key(&context.program_id, &mint);
 
-    let (ata_user_wallet, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
+    let (user_ata, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
 
-    let (ata_program_wallet_key, _bump) = State::spl_ata(&program_wallet_key, &mint);
+    let (wallet_ata, _bump) = State::spl_ata(&wallet, &mint);
 
     let ix = context.compose_ix(
         &data.as_slice(),
         &[
-            &ata_user_wallet,
+            &user_ata,
             &balance_key,
-            &program_wallet_key,
-            &ata_program_wallet_key,
+            &wallet,
+            &wallet_ata,
             &spl_token::ID,
             &spl_associated_token_account::ID,
             &mint,

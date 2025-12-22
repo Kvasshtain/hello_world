@@ -19,6 +19,9 @@ pub enum Error {
 
     #[error("An solana program error: {0}")]
     ProgramError(ProgramError),
+
+    #[error("Insufficient account balance")]
+    InsufficientBalance,
 }
 
 impl From<ProgramError> for Error {

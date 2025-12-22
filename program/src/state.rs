@@ -84,7 +84,7 @@ impl<'a> State<'a> {
 
     fn pda(
         &self,
-        pubkey_bump_seeds: (Pubkey, u8, Seed),
+        pubkey_bump_seeds: (Pubkey, Seed),
         size: usize,
         owner: &Pubkey,
     ) -> Result<&'a AccountInfo<'a>> {
@@ -96,17 +96,13 @@ impl<'a> State<'a> {
 
         let sys_program = self.get(system_program::ID)?;
 
-        let b = &[pubkey_bump_seeds.1];
-
-        let mut a = pubkey_bump_seeds
-            .2
+        let a = pubkey_bump_seeds
+            .1
             .cast()
             .as_slice()
             .iter()
             .map(|&x| x)
             .collect::<Vec<_>>();
-
-        a.push(b);
 
         create_pda_account(
             self.signer,
@@ -132,27 +128,19 @@ impl<'a> State<'a> {
         )
     }
 
-    pub fn wallet_pubkey_bump(program_id: &'a Pubkey, mint: &'a Pubkey) -> (Pubkey, u8, Seed) {
+    pub fn wallet_key(program_id: &'a Pubkey, mint: &'a Pubkey) -> (Pubkey, Seed) {
         let seeds = Seed {
             items: vec![WALLET_SEED.to_vec(), mint.as_ref().to_vec()],
         };
 
-        let result = Pubkey::find_program_address(&seeds.cast().as_slice(), program_id);
-
-        (result.0, result.1, seeds)
+        State::key_seeds(program_id, seeds)
     }
 
-    pub fn wallet_info(&self, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
-        let pubkey_bump_seeds = State::wallet_pubkey_bump(self.program_id, mint);
-
-        self.pda(pubkey_bump_seeds, 0, &system_program::ID)
-    }
-
-    pub fn balance_pubkey_bump(
+    pub fn balance_key(
         program_id: &'a Pubkey,
         user_key: &'a Pubkey,
         mint: &'a Pubkey,
-    ) -> (Pubkey, u8, Seed) {
+    ) -> (Pubkey, Seed) {
         let seeds = Seed {
             items: vec![
                 BALANCE_ACCOUNT.to_vec(),
@@ -161,13 +149,29 @@ impl<'a> State<'a> {
             ],
         };
 
-        let result = Pubkey::find_program_address(&seeds.cast().as_slice(), program_id);
+        State::key_seeds(program_id, seeds)
+    }
 
-        (result.0, result.1, seeds)
+    fn key_seeds(program_id: &'a Pubkey, seeds: Seed) -> (Pubkey, Seed) {
+        let (pubkey, bump) = Pubkey::find_program_address(&seeds.cast().as_slice(), program_id);
+
+        let mut items = seeds.items;
+
+        items.push(vec![bump]);
+
+        let new_seeds = Seed { items };
+
+        (pubkey, new_seeds)
+    }
+
+    pub fn wallet_info(&self, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
+        let pubkey_bump_seeds = State::wallet_key(self.program_id, mint);
+
+        self.pda(pubkey_bump_seeds, 0, &system_program::ID)
     }
 
     pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
-        let pubkey_bump_seeds = State::balance_pubkey_bump(self.program_id, user_key, mint);
+        let pubkey_bump_seeds = State::balance_key(self.program_id, user_key, mint);
 
         self.pda(
             pubkey_bump_seeds,

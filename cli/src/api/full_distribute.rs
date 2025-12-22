@@ -1,6 +1,10 @@
 use {
     crate::{
-        api::{deposit, distribute, internal_transfer, native_transfer, LAMPORTS},
+        api::{
+            create_send_tx::create_send_tx, deposit, distribute,
+            internal_transfer_ix::internal_transfer_ix, native_transfer_ix::native_transfer_ix,
+            LAMPORTS,
+        },
         context::Context,
     },
     anyhow::Result,
@@ -25,11 +29,22 @@ pub async fn full_distribute<'a>(
 
     let _ = write_keypair_file(&genesis, file_name);
 
-    let _ = native_transfer(&context, LAMPORTS * count, genesis.pubkey()).await;
+    let native_transfer_ix = native_transfer_ix(&context, LAMPORTS * count, genesis.pubkey()).await;
 
-    let _ = internal_transfer(context.clone(), count * amount, mint, genesis.pubkey()).await;
+    println!("LAMPORTS * count {}", LAMPORTS * count);
+
+    let internal_transfer_ix =
+        internal_transfer_ix(&context, count * amount, mint, genesis.pubkey()).await;
+
+    println!("count {}", count);
+
+    println!("amount {}", amount);
+
+    println!("count * amount {}", count * amount);
+
+    let _ = create_send_tx(&context, &[native_transfer_ix?, internal_transfer_ix?]).await;
 
     let genesis_context = Context::new(context.program_id, &genesis, context.client)?;
 
-    distribute(genesis_context, mint, count, amount).await
+    distribute(genesis_context, mint, count - 1, amount).await
 }

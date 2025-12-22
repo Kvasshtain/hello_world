@@ -1,8 +1,6 @@
 use {
     crate::{
-        api::{
-            internal_transfer, native_internal_transfer::native_internal_transfer, native_transfer,
-        },
+        api::{create_send_tx, internal_transfer_ix, native_transfer_ix},
         context::Context,
     },
     anyhow::Result,
@@ -17,7 +15,7 @@ use {
 };
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 1000;
+const CHUNK_SIZE: usize = 300;//1000;
 
 pub async fn batch<'a>(
     context: Context<'a>,
@@ -41,9 +39,11 @@ pub async fn batch<'a>(
     let from_context = Context::new(context.program_id, context.keypair, context.client)?;
     let to_context = Context::new(context.program_id, &to, context.client)?;
 
-    let result = vec![
-        native_internal_transfer(&context, new_lamports, new_amount, mint, to.pubkey()).await?,
-    ];
+    let native_transfer_ix = native_transfer_ix(&context, new_lamports, to.pubkey()).await;
+    let internal_transfer_ix = internal_transfer_ix(&context, new_amount, mint, to.pubkey()).await;
+
+    let result =
+        vec![create_send_tx(&context, &[native_transfer_ix?, internal_transfer_ix?]).await?];
 
     let fut1 = Box::pin(batch(from_context, mint, unfunded, amount, depth + 1));
 
@@ -59,35 +59,6 @@ pub async fn batch<'a>(
         .collect::<Vec<_>>();
 
     Ok(results)
-}
-
-async fn distribute_chunk<'a>(
-    context: Context<'a>,
-    mint: Pubkey,
-    mut recipients: Vec<Keypair>,
-    amount: u64,
-) -> Result<Vec<Signature>> {
-    let count = recipients.len() as u64;
-
-    let to = recipients.pop().unwrap();
-
-    let _ = native_transfer(&context, count * LAMPORTS, to.pubkey()).await?;
-    let result = internal_transfer(context.clone(), count * amount, mint, to.pubkey()).await?;
-
-    let mut sigs = vec![result];
-
-    let mut batch_sigs = batch(
-        Context::new(context.program_id, &to, context.client)?,
-        mint,
-        recipients,
-        amount,
-        0,
-    )
-    .await?;
-
-    sigs.append(&mut batch_sigs);
-
-    Ok(sigs)
 }
 
 fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
@@ -146,21 +117,18 @@ pub async fn distribute<'a>(
 ) -> Result<Vec<Signature>> {
     let balance = Context::get_balance(context.clone(), mint).await?;
 
-    if balance != count * amount {
+    if balance != (count + 1) * amount {
         return Err(anyhow::Error::msg("Insufficient balance"));
     }
 
-    let recipients = (0..count - 1)
+    let recipients = (0..count)
         .into_iter()
-        .map(|_i| {
-            let keypair = Keypair::new();
-            keypair
-        })
+        .map(|_i| Keypair::new())
         .collect::<Vec<_>>();
 
     let (tasks, paths) = save_recipients(16, recipients).await;
 
-    let _results = join_all(tasks).await;
+    let _ = join_all(tasks).await;
 
     let mut recipients = vec![];
 
@@ -174,7 +142,7 @@ pub async fn distribute<'a>(
     let mut sigs = vec![];
 
     for i in into_chunks(recipients, CHUNK_SIZE) {
-        sigs.push(distribute_chunk(context.clone(), mint, i, amount).await?)
+        sigs.push(batch(context.clone(), mint, i, amount, 0).await?)
     }
 
     let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();

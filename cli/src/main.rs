@@ -6,8 +6,8 @@ pub mod transaction_log;
 use {
     crate::{
         api::{
-            allocate, assign, create, deposit, distribute, full_distribute, internal_transfer,
-            native_transfer, native_transfer_from, resize, withdraw,
+            allocate, assign, create, create_send_tx, deposit, distribute, full_distribute,
+            internal_transfer_ix, native_transfer_from, native_transfer_ix, resize, withdraw,
         },
         context::Context,
         program_option::{Args, Cmd},
@@ -38,7 +38,12 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
             owner: owner_pubkey,
         } => create(&context, seed, size, owner_pubkey).await?.into(),
         Cmd::Resize { size, seed } => resize(context, seed, size).await?.into(),
-        Cmd::Transfer { amount, to } => native_transfer(&context, amount, to).await?.into(),
+        Cmd::Transfer { amount, to } => {
+            let native_transfer_ix = native_transfer_ix(&context, amount, to).await?;
+            create_send_tx(&context, &[native_transfer_ix])
+                .await?
+                .into()
+        }
         Cmd::TransferFrom {
             amount,
             seed,
@@ -52,7 +57,10 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
         Cmd::Deposit { amount, mint } => deposit(context, amount, mint).await?.into(),
         Cmd::Withdraw { amount, mint, to } => withdraw(context, amount, mint, to).await?.into(),
         Cmd::InternalTransfer { amount, mint, to } => {
-            internal_transfer(context, amount, mint, to).await?.into()
+            let internal_transfer_ix = internal_transfer_ix(&context, amount, mint, to).await?;
+            create_send_tx(&context, &[internal_transfer_ix])
+                .await?
+                .into()
         }
         Cmd::Distribute {
             mint,
