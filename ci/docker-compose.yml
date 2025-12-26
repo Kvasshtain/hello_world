@@ -1,0 +1,22 @@
+  airdrop:
+    container_name: airdrop
+    image: onboardint/test:main
+    command: >
+      /bin/sh -c
+      "
+      sleep 10 && 
+      /opt/bin/solana-keygen new --no-bip39-passphrase --silent && 
+      for f in /opt/keys/id*.json; 
+      do 
+          /opt/bin/solana -u http://solana:8899 -v airdrop 1000 $$f; 
+      done;
+
+      /opt/bin/solana -u http://solana:8899 -v airdrop 1000 /opt/keys/my-keypair.json; 
+      "
+    volumes:
+      - ./keys:/opt/keys
+    depends_on:
+      solana:
+        condition: service_healthy
+    networks:
+      - net
