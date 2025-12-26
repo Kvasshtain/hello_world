@@ -18,9 +18,9 @@ FROM ubuntu:22.04 AS test_env
 RUN apt-get update && apt install -y openssl libpq-dev
 
 COPY --from=build /opt/bin /opt/bin
-COPY --from=build /opt/tests/ci /opt/ci
+COPY --from=build /opt/hello_world/ci /opt/ci
 COPY --from=solana /usr/bin/solana /opt/bin/
 COPY --from=solana /usr/bin/solana-keygen /opt/bin/
 
-ENTRYPOINT [ "/opt/bin/evm" ]
+ENTRYPOINT [ "/opt/bin/hw" ]
 
