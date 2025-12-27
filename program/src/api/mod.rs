@@ -6,8 +6,9 @@ pub mod internal_transfer;
 pub mod native_transfer;
 pub mod native_transfer_from;
 pub mod resize;
+pub mod withdraw;
 
 pub use {
     allocate::*, assign::*, create::*, deposit::*, internal_transfer::*, native_transfer::*,
-    native_transfer_from::*, resize::*,
+    native_transfer_from::*, resize::*, withdraw::*,
 };

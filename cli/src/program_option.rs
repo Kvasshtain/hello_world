@@ -70,6 +70,14 @@ pub enum Cmd {
         /// Mint account pubkey.
         mint: Pubkey,
     },
+    Withdraw {
+        /// Tokens to withdraw.
+        amount: u64,
+        /// Mint account pubkey.
+        mint: Pubkey,
+        /// Destination account Id (To which withdraw will be done)
+        to: Pubkey,
+    },
     InternalTransfer {
         /// Tokens to send.
         amount: u64,
@@ -79,14 +87,6 @@ pub enum Cmd {
         to: Pubkey,
     },
     Distribute {
-        /// Mint account pubkey.
-        mint: Pubkey,
-        /// Distributed accounts count
-        count: u64,
-        /// Tokens to distribute.
-        amount: u64,
-    },
-    FullDistribute {
         /// Mint account pubkey.
         mint: Pubkey,
         /// Distributed accounts count

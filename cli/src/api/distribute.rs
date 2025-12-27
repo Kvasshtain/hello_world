@@ -1,24 +1,29 @@
 use {
     crate::{
-        api::{internal_transfer, native_transfer},
+        api::{internal_transfer_ix, native_transfer_ix},
         context::Context,
     },
     anyhow::Result,
+    futures_util::future::join_all,
     solana_sdk::{
         pubkey::Pubkey,
-        signature::{write_keypair_file, Keypair, Signature},
+        signature::{read_keypair_file, write_keypair_file, Keypair, Signature},
         signer::Signer,
     },
+    std::{path::Path, sync::Arc},
+    tokio::{sync::Semaphore, task::JoinHandle},
 };
+use crate::api::deposit;
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 10000;
+const CHUNK_SIZE: usize = 300;
 
 pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
     mut unfunded: Vec<Keypair>,
     amount: u64,
+    depth: u64,
 ) -> Result<Vec<Signature>> {
     if unfunded.is_empty() {
         return Ok(vec![]);
@@ -30,15 +35,21 @@ pub async fn batch<'a>(
     let next = unfunded.split_off(at);
 
     let new_amount = ((next.len() + 1) as u64) * amount;
+    let new_lamports = ((next.len() + 1) as u64) * LAMPORTS;
 
     let from_context = Context::new(context.program_id, context.keypair, context.client)?;
     let to_context = Context::new(context.program_id, &to, context.client)?;
 
-    let result = vec![internal_transfer(context, new_amount, mint, to.pubkey()).await?];
+    let native_transfer_ix = native_transfer_ix(&context, new_lamports, to.pubkey()).await;
+    let internal_transfer_ix = internal_transfer_ix(&context, new_amount, mint, to.pubkey()).await;
 
-    let fut1 = Box::pin(batch(from_context, mint, unfunded, amount));
+    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
 
-    let fut2 = Box::pin(batch(to_context, mint, next, amount));
+    let result = vec![context.client.send_and_confirm_transaction(&tx).await?];
+
+    let fut1 = Box::pin(batch(from_context, mint, unfunded, amount, depth + 1));
+
+    let fut2 = Box::pin(batch(to_context, mint, next, amount, depth + 1));
 
     let results = futures_util::future::join_all(vec![fut1, fut2])
         .await
@@ -50,45 +61,6 @@ pub async fn batch<'a>(
         .collect::<Vec<_>>();
 
     Ok(results)
-}
-
-async fn distribute_chunk<'a>(
-    context: Context<'a>,
-    mint: Pubkey,
-    mut recipients: Vec<Keypair>,
-    amount: u64,
-) -> Result<Vec<Signature>> {
-    let rec = &mut recipients;
-
-    let futures = rec
-        .into_iter()
-        .map(|pair| native_transfer(&context, LAMPORTS, pair.pubkey()))
-        .collect::<Vec<_>>();
-
-    futures_util::future::join_all(futures)
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>>>()?;
-
-    let count = recipients.len() as u64;
-
-    let to = recipients.pop().unwrap();
-
-    let result = internal_transfer(context.clone(), count * amount, mint, to.pubkey()).await?;
-
-    let mut sigs = vec![result];
-
-    let mut batch_sigs = batch(
-        Context::new(context.program_id, &to, context.client)?,
-        mint,
-        recipients,
-        amount,
-    )
-    .await?;
-
-    sigs.append(&mut batch_sigs);
-
-    Ok(sigs)
 }
 
 fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
@@ -106,39 +78,89 @@ fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
     chunks
 }
 
+async fn save_recipients(
+    tasks: usize,
+    recipients: Vec<Keypair>,
+) -> (Vec<JoinHandle<()>>, Vec<String>) {
+    let semaphore = Arc::new(Semaphore::new(tasks));
+
+    let mut jh = vec![];
+
+    let mut i = 0;
+
+    let mut paths: Vec<String> = vec![];
+
+    for recipient in recipients {
+        let semaphore = Arc::clone(&semaphore);
+        let permit = semaphore.acquire_owned().await.unwrap();
+
+        i = i + 1;
+
+        let path = format!("./key_pairs/recipient{}.json", i);
+        paths.push(path.clone());
+
+        let file_name = path;
+
+        let handle = tokio::spawn(async move {
+            let _ = write_keypair_file(&recipient, file_name);
+            drop(permit);
+        });
+
+        jh.push(handle);
+    }
+    (jh, paths)
+}
+
 pub async fn distribute<'a>(
     context: Context<'a>,
     mint: Pubkey,
     count: u64,
     amount: u64,
 ) -> Result<Vec<Signature>> {
-    let balance = Context::get_balance(context.clone(), mint).await?;
+    let _ = deposit(context.clone(), count * amount, mint).await;
 
-    if balance != count * amount {
-        return Err(anyhow::Error::msg("Insufficient balance"));
-    }
+    let genesis = Keypair::new();
 
-    let recipients = (1..count)
+    let file_name = format!("key_pairs/recipient{}.json", 0);
+
+    let _ = write_keypair_file(&genesis, file_name);
+
+    let native_transfer_ix = native_transfer_ix(&context, LAMPORTS * count, genesis.pubkey()).await;
+
+    let internal_transfer_ix =
+        internal_transfer_ix(&context, count * amount, mint, genesis.pubkey()).await;
+
+    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
+
+    context.client.send_and_confirm_transaction(&tx).await?;
+
+    let genesis_context = Context::new(context.program_id, &genesis, context.client)?;
+
+    let recipients = (0..count - 1)
         .into_iter()
-        .map(|i| {
-            let keypair = Keypair::new();
-            let file_name = format!("key_pairs/recipient{}.json", i);
-            let _ = write_keypair_file(&keypair, file_name);
-            keypair
-        })
+        .map(|_i| Keypair::new())
         .collect::<Vec<_>>();
 
-    let sigs = futures_util::future::join_all(
-        into_chunks(recipients, CHUNK_SIZE)
-            .into_iter()
-            .map(async |chunk| distribute_chunk(context.clone(), mint, chunk, amount).await),
-    )
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>>>()?
-    .into_iter()
-    .flatten()
-    .collect::<Vec<_>>();
+    let (tasks, paths) = save_recipients(16, recipients).await;
+
+    let _ = join_all(tasks).await;
+
+    let mut recipients = vec![];
+
+    for path_str in paths {
+        let path = Path::new(&path_str);
+
+        let keypair: Keypair = read_keypair_file(path).unwrap();
+        recipients.push(keypair);
+    }
+
+    let mut sigs = vec![];
+
+    for i in into_chunks(recipients, CHUNK_SIZE) {
+        sigs.push(batch(genesis_context.clone(), mint, i, amount, 0).await?)
+    }
+
+    let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();
 
     Ok(sigs)
 }

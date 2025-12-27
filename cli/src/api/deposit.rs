@@ -12,10 +12,10 @@ pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Res
 
     data.extend(mint.to_bytes());
 
-    let (balance_key, _bump, _seed) =
-        State::balance_pubkey_bump(&context.program_id, &context.keypair.pubkey(), &mint);
+    let (balance_key, _seed) =
+        State::balance_key(&context.program_id, &context.keypair.pubkey(), &mint);
 
-    let (program_wallet_key, _bump, _seed) = State::wallet_pubkey_bump(&context.program_id, &mint);
+    let (program_wallet_key, _seed) = State::wallet_key(&context.program_id, &mint);
 
     let (ata_user_wallet, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
 

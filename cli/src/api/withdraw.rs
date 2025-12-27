@@ -1,0 +1,57 @@
+use {
+    crate::context::Context,
+    anyhow::Result,
+    hello_world::{Instruction, State},
+    solana_sdk::{
+        pubkey::Pubkey,
+        signature::{Signature, Signer},
+    },
+};
+
+pub async fn withdraw<'a>(
+    context: Context<'a>,
+    amount: u64,
+    mint: Pubkey,
+    to: Pubkey,
+) -> Result<Signature> {
+    let balance = Context::get_balance(context.clone(), mint).await?;
+
+    if balance < amount {
+        return Err(anyhow::Error::msg("Insufficient balance"));
+    }
+
+    let mut data = vec![Instruction::Withdraw as u8];
+
+    data.extend(amount.to_le_bytes());
+
+    data.extend(mint.to_bytes());
+
+    data.extend(to.to_bytes());
+
+    let (balance_key, _seed) =
+        State::balance_key(&context.program_id, &context.keypair.pubkey(), &mint);
+
+    let (wallet, _seed) = State::wallet_key(&context.program_id, &mint);
+
+    let (user_ata, _bump) = State::spl_ata(&context.keypair.pubkey(), &mint);
+
+    let (wallet_ata, _bump) = State::spl_ata(&wallet, &mint);
+
+    let ix = context.compose_ix(
+        &data.as_slice(),
+        &[
+            &user_ata,
+            &balance_key,
+            &wallet,
+            &wallet_ata,
+            &spl_token::ID,
+            &spl_associated_token_account::ID,
+            &mint,
+            &to,
+        ],
+    );
+
+    let tx = context.compose_tx(&[ix]).await?;
+
+    Ok(context.client.send_and_confirm_transaction(&tx).await?)
+}
