@@ -94,12 +94,4 @@ pub enum Cmd {
         /// Tokens to distribute.
         amount: u64,
     },
-    FullDistribute {
-        /// Mint account pubkey.
-        mint: Pubkey,
-        /// Distributed accounts count
-        count: u64,
-        /// Tokens to distribute.
-        amount: u64,
-    },
 }

@@ -1,5 +1,5 @@
 use {
-    memo_cli::{api::full_distribute, context::Context},
+    memo_cli::{api::distribute, context::Context},
     rstest::*,
     solana_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
@@ -94,9 +94,9 @@ async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
 
 #[rstest]
 #[serial_test::serial]
-//#[case(500)]
-//#[case(5000)]
-#[case(50000)]
+#[case(50)]
+#[case(500)]
+#[case(5000)]
 async fn test(#[case] count: u64) {
     let url = "http://localhost:8899";
 
@@ -116,38 +116,26 @@ async fn test(#[case] count: u64) {
     let program_id = Pubkey::from_str("Dfjw9nvSTnidg32X8VJNCK3GD1WuQVsz1EhbyrKDwt2j").unwrap();
 
     let mint_pubkey = mint.pubkey();
-    println!("mint_pubkey!!!!! = {}", mint_pubkey);
-    //let mint_pubkey = Pubkey::from_str("GPuA19jNYX76DYz9Vdw87xvSqXoKUjo239KvdXAm2c8C").unwrap(); //Delete!!!!!!
 
     let context = Context::new(program_id, &keypair, &client).unwrap();
 
     let amount = 5;
 
-    let _result = full_distribute(context, mint_pubkey, count, amount).await;
+    distribute(context, mint_pubkey, count, amount).await.unwrap();
 
     let dir = fs::read_dir("./key_pairs").unwrap();
 
-    let mut count: u64 = 0; //Delete!!!!!!
-
     for entry in dir {
-        println!("count = {}", count);
-
-        count = count + 1;
-
         let entry = entry.unwrap();
         let path = entry.path();
 
         let keypair: Keypair = read_keypair_file(path).unwrap();
-        println!("pubkey!!!!! = {}", keypair.pubkey());
 
         let context = Context::new(program_id, &keypair, &client).unwrap();
 
         let balance = Context::get_balance(context.clone(), mint_pubkey)
             .await
             .unwrap();
-
-        println!("balance {}", balance);
-        println!("amount {}", amount);
 
         assert_eq!(balance, amount);
     }

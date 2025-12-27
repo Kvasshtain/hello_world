@@ -1,6 +1,6 @@
 use {
     crate::{
-        api::{create_send_tx, internal_transfer_ix, native_transfer_ix},
+        api::{internal_transfer_ix, native_transfer_ix},
         context::Context,
     },
     anyhow::Result,
@@ -13,9 +13,10 @@ use {
     std::{path::Path, sync::Arc},
     tokio::{sync::Semaphore, task::JoinHandle},
 };
+use crate::api::deposit;
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 300;//1000;
+const CHUNK_SIZE: usize = 300;
 
 pub async fn batch<'a>(
     context: Context<'a>,
@@ -42,8 +43,9 @@ pub async fn batch<'a>(
     let native_transfer_ix = native_transfer_ix(&context, new_lamports, to.pubkey()).await;
     let internal_transfer_ix = internal_transfer_ix(&context, new_amount, mint, to.pubkey()).await;
 
-    let result =
-        vec![create_send_tx(&context, &[native_transfer_ix?, internal_transfer_ix?]).await?];
+    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
+
+    let result = vec![context.client.send_and_confirm_transaction(&tx).await?];
 
     let fut1 = Box::pin(batch(from_context, mint, unfunded, amount, depth + 1));
 
@@ -115,13 +117,26 @@ pub async fn distribute<'a>(
     count: u64,
     amount: u64,
 ) -> Result<Vec<Signature>> {
-    let balance = Context::get_balance(context.clone(), mint).await?;
+    let _ = deposit(context.clone(), count * amount, mint).await;
 
-    if balance != (count + 1) * amount {
-        return Err(anyhow::Error::msg("Insufficient balance"));
-    }
+    let genesis = Keypair::new();
 
-    let recipients = (0..count)
+    let file_name = format!("key_pairs/recipient{}.json", 0);
+
+    let _ = write_keypair_file(&genesis, file_name);
+
+    let native_transfer_ix = native_transfer_ix(&context, LAMPORTS * count, genesis.pubkey()).await;
+
+    let internal_transfer_ix =
+        internal_transfer_ix(&context, count * amount, mint, genesis.pubkey()).await;
+
+    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
+
+    context.client.send_and_confirm_transaction(&tx).await?;
+
+    let genesis_context = Context::new(context.program_id, &genesis, context.client)?;
+
+    let recipients = (0..count - 1)
         .into_iter()
         .map(|_i| Keypair::new())
         .collect::<Vec<_>>();
@@ -142,7 +157,7 @@ pub async fn distribute<'a>(
     let mut sigs = vec![];
 
     for i in into_chunks(recipients, CHUNK_SIZE) {
-        sigs.push(batch(context.clone(), mint, i, amount, 0).await?)
+        sigs.push(batch(genesis_context.clone(), mint, i, amount, 0).await?)
     }
 
     let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();
