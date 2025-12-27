@@ -1,0 +1,6 @@
+CI
+
+use the following commands, files to build images and run CI
+
+docker build --tag hw -f hello_world/ci/Dockerfile_hw .
+

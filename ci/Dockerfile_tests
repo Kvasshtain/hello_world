@@ -1,0 +1,26 @@
+FROM anzaxyz/agave:v2.1.7 as solana
+
+FROM rust:1.88.0 as build
+
+
+COPY ./hello_world /opt/hello_world
+
+RUN mkdir /opt/bin
+
+WORKDIR /opt/hello_world
+#RUN cargo rustc --test hw -- --emit link="/opt/bin/hw"
+
+RUN cargo test --no-run
+RUN find target/debug/deps -name "memo"* -type f -executable | xargs -I {} mv {} /opt/bin/hw
+
+FROM ubuntu:22.04 AS test_env
+
+RUN apt-get update && apt install -y openssl libpq-dev
+
+COPY --from=build /opt/bin /opt/bin
+COPY --from=build /opt/hello_world/ci /opt/ci
+COPY --from=solana /usr/bin/solana /opt/bin/
+COPY --from=solana /usr/bin/solana-keygen /opt/bin/
+
+ENTRYPOINT [ "/opt/bin/hw" ]
+
