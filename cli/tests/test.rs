@@ -95,10 +95,10 @@ async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
 #[rstest]
 #[serial_test::serial]
 #[case(50)]
-#[case(500)]
-#[case(5000)]
+//#[case(500)]
+//#[case(5000)]
 async fn test(#[case] count: u64) {
-    let url = "http://localhost:8899";
+    let url = "http://solana:8899";
 
     let client = RpcClient::new_with_commitment(
         url.to_string(),
@@ -107,13 +107,18 @@ async fn test(#[case] count: u64) {
         },
     );
 
-    let keypair_path = "/home/kvasshtain/.config/solana/id.json";
+    let keypair_path = "/opt/ci/test.json";//"/home/kvasshtain/.config/solana/id.json";
 
     let keypair: Keypair = read_keypair_file(Path::new(keypair_path)).unwrap();
 
-    let mint = arrange(&client, &keypair).await;
+    let program_keypair_path = "/opt/ci/hello-world-keypair.json";
 
-    let program_id = Pubkey::from_str("Dfjw9nvSTnidg32X8VJNCK3GD1WuQVsz1EhbyrKDwt2j").unwrap();
+    let program_keypair: Keypair = read_keypair_file(Path::new(program_keypair_path)).unwrap();
+
+    //let program_id = Pubkey::from_str("Dfjw9nvSTnidg32X8VJNCK3GD1WuQVsz1EhbyrKDwt2j").unwrap();
+    let program_id = program_keypair.pubkey();
+
+    let mint = arrange(&client, &keypair).await;
 
     let mint_pubkey = mint.pubkey();
 

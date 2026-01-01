@@ -12,5 +12,6 @@ VALIDATOR=(
 export SOLANA_RUN_SH_GENESIS_ARGS=${GENESIS[@]}
 export SOLANA_RUN_SH_VALIDATOR_ARGS=${VALIDATOR[@]}
 
+echo "PUBKEY: {$PUBKEY}"
 
 /usr/bin/solana-run.sh
