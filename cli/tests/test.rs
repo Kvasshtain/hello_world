@@ -5,7 +5,6 @@ use {
     solana_sdk::{
         commitment_config::{CommitmentConfig, CommitmentLevel},
         program_pack::Pack,
-        pubkey::Pubkey,
         signature::Signer,
         signature::{read_keypair_file, Keypair},
         system_instruction::create_account,
@@ -18,7 +17,7 @@ use {
         instruction::{initialize_mint, mint_to},
         state::Mint,
     },
-    std::{fs, path::Path, str::FromStr},
+    std::{fs, path::Path},
 };
 
 async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
@@ -107,7 +106,7 @@ async fn test(#[case] count: u64) {
         },
     );
 
-    let keypair_path = "/opt/ci/test.json";//"/home/kvasshtain/.config/solana/id.json";
+    let keypair_path = "/opt/ci/test.json";
 
     let keypair: Keypair = read_keypair_file(Path::new(keypair_path)).unwrap();
 
@@ -115,7 +114,6 @@ async fn test(#[case] count: u64) {
 
     let program_keypair: Keypair = read_keypair_file(Path::new(program_keypair_path)).unwrap();
 
-    //let program_id = Pubkey::from_str("Dfjw9nvSTnidg32X8VJNCK3GD1WuQVsz1EhbyrKDwt2j").unwrap();
     let program_id = program_keypair.pubkey();
 
     let mint = arrange(&client, &keypair).await;

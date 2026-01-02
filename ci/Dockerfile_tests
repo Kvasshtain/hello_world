@@ -2,13 +2,11 @@ FROM anzaxyz/agave:v2.1.7 AS solana
 
 FROM rust:1.88.0 AS build
 
-
 COPY ./hello_world /opt/hello_world
 
 RUN mkdir /opt/bin
 
 WORKDIR /opt/hello_world
-#RUN cargo rustc --test hw -- --emit link="/opt/bin/hw"
 
 RUN cargo test --no-run
 RUN find target/debug/deps -name "test"* -type f -executable | xargs -I {} mv {} /opt/bin/hw
@@ -22,7 +20,4 @@ COPY --from=build /opt/hello_world/ci /opt/ci
 COPY --from=solana /usr/bin/solana /opt/bin/
 COPY --from=solana /usr/bin/solana-keygen /opt/bin/
 
-#ENTRYPOINT [ "/opt/bin/hw" ]
-RUN chmod +x /opt/ci/start_test.sh
-
-ENTRYPOINT [ "/opt/ci/start_test.sh" ]
+ENTRYPOINT [ "/opt/bin/hw" ]
