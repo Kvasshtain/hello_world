@@ -3,6 +3,7 @@ services:
     image: hw:latest
     environment:
       RUST_LOG: solana_runtime::system_instruction_processor=debug,solana_runtime::message_processor=debug,solana_bpf_loader=debug,solana_rbpf=debug
+      RUST_BACKTRACE: 1
     hostname: solana
     ports:
       - "8899:8899"
