@@ -14,6 +14,7 @@ RUN find target/debug/deps -name "test"* -type f -executable | xargs -I {} mv {}
 FROM ubuntu:22.04 AS test_env
 
 RUN apt-get update && apt install -y openssl libpq-dev
+RUN apt install -y iputils-ping
 
 COPY --from=build /opt/bin /opt/bin
 COPY --from=build /opt/hello_world/ci /opt/ci
