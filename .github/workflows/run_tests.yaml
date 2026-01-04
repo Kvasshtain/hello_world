@@ -26,15 +26,6 @@ jobs:
 
       - name: 'Run tests'
         run: |
-          cd ../..
-          ls
-          echo "--------------"
-          cd hello_world
-          ls
-          echo "--------------"
-          cd hello_world
-          ls
-          echo "--------------"
           cd ..
           docker build --tag hw -f hello_world/ci/Dockerfile_hw .
           docker build --tag hw-test -f hello_world/ci/Dockerfile_tests .
