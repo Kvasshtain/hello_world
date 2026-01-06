@@ -1,6 +1,7 @@
 services:
   solana:
-    image: hw:latest
+    container_name: solana
+    image: solana:latest
     environment:
       RUST_LOG: solana_runtime::system_instruction_processor=debug,solana_runtime::message_processor=debug,solana_bpf_loader=debug,solana_rbpf=debug
       RUST_BACKTRACE: 1
