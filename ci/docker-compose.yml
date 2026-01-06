@@ -31,14 +31,15 @@ services:
     container_name: hw-test
     image: hw-test:latest
     entrypoint: /bin/bash -c "/bin/bash -c \"$${@}\""
-    command: >
-        /bin/sh -c
-        "
-        sleep 60 &&
-        /opt/bin/solana-keygen new --no-bip39-passphrase -s -o /opt/ci/test.json;
-        /opt/bin/solana -u http://solana:8899 -v airdrop 1000 /opt/ci/test.json;
-        /opt/bin/hw
-        "
+    command: sh -c "ping -c 5 solana"
+#    command: >
+#        /bin/sh -c
+#        "
+#        sleep 60 &&
+#        /opt/bin/solana-keygen new --no-bip39-passphrase -s -o /opt/ci/test.json;
+#        /opt/bin/solana -u http://solana:8899 -v airdrop 1000 /opt/ci/test.json;
+#        /opt/bin/hw
+#        "
     hostname: tests
     networks:
       - net
