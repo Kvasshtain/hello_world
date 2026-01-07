@@ -7,6 +7,11 @@ RUN apt-get clean && \
     DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
     apt-get install -y curl build-essential
 
+RUN apt-get install -y rustup
+RUN rustup default stable
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.7/install)" && \
+    /root/.local/share/solana/install/active_release/bin/sdk/sbf/scripts/install.sh
+
 RUN echo "solana"
 
 
