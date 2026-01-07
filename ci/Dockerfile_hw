@@ -23,7 +23,7 @@ RUN cargo build-sbf
 FROM anzaxyz/agave:v2.1.7
 COPY --from=build /opt/hello_world/target/deploy/hello_world.so /opt/
 COPY --from=build /opt/hello_world/ci /opt/ci
-RUN chmod +x /opt/ci/start_solana.sh
+#RUN chmod +x /opt/ci/start_solana.sh
 
 RUN echo "solana"
 
