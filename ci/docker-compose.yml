@@ -25,7 +25,8 @@ services:
     image: hw-test:latest
     command: > 
       sh -c "
-      sleep 120 &&
+      echo sleep &
+      sleep 5m &&
       ping -c 5 192.168.0.2
       "
     hostname: tests
