@@ -30,7 +30,7 @@ jobs:
           docker build --tag solana -f hello_world/ci/Dockerfile_hw .
           docker build --tag hw-test -f hello_world/ci/Dockerfile_tests .
           cd hello_world/ci
-          docker-compose up tests
+          docker-compose up solana
         shell: bash
 
 
