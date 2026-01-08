@@ -16,16 +16,18 @@ services:
       - "8001"
       - "8001-8009/udp"
     networks:
-      - net
+      net:
+        ipv4_address: 192.168.0.2
 
 
   tests:
     container_name: hw-test
     image: hw-test:latest
-    command: sh -c "ping -c 5 solana"
+    command: sh -c "ping -c 5 192.168.0.2"
     hostname: tests
     networks:
-      - net
+      net:
+        ipv4_address: 192.168.0.3
     depends_on:
       solana:
         condition: service_started
@@ -33,6 +35,12 @@ services:
 
 networks:
   net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.0.0/16
+          gateway: 192.168.0.1
+
 
 
 #    services:
