@@ -23,7 +23,11 @@ services:
   tests:
     container_name: hw-test
     image: hw-test:latest
-    command: sh -c "ping -c 5 192.168.0.2"
+    command: > 
+      sh -c "
+      sleep 60 &&
+      ping -c 5 192.168.0.2
+      "
     hostname: tests
     networks:
       net:
