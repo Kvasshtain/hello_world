@@ -4,9 +4,9 @@ services:
     image: solana:latest
 #    command: ["sleep", "infinity"]
     command: >
-      sh -c "
+      bash -c "
       echo =========================== &
-      ulimit -n
+      ulimit -n &
       echo =========================== &
       ip a &
       echo =========================== &
