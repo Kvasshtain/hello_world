@@ -3,13 +3,10 @@ services:
     container_name: solana
     image: solana:latest
 #    command: ["sleep", "infinity"]
-    command: >
-      bash -c "
-      echo +++++++++++++++++++++++++++++++
-      ulimit -n 1024
-      ulimit -n
-      echo +++++++++++++++++++++++++++++++
-      "
+    command:
+      - ulimit -n 1024
+      - ulimit -n
+
     hostname: solana
     ports:
       - "8899:8899"
