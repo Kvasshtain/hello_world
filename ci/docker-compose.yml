@@ -5,16 +5,10 @@ services:
 #    command: ["sleep", "infinity"]
     command: >
       bash -c "
-      ulimit -n 1024 &
-      echo =========================== &
-      ulimit -n &
-      echo =========================== &
-      ip a &
-      echo =========================== &
-      ifconfig -a &
-      echo =========================== &
-      ss -tuln &
-      echo ===========================
+      echo +++++++++++++++++++++++++++++++
+      ulimit -n 1024
+      ulimit -n
+      echo +++++++++++++++++++++++++++++++
       "
     hostname: solana
     ports:
