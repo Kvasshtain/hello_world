@@ -2,7 +2,19 @@ services:
   solana:
     container_name: solana
     image: solana:latest
-    command: ["sleep", "infinity"]
+#    command: ["sleep", "infinity"]
+    command: >
+      sh -c "
+      echo =========================== &
+      ulimit -n
+      echo =========================== &
+      ip a &
+      echo =========================== &
+      ifconfig -a &
+      echo =========================== &
+      ss -tuln &
+      echo ===========================
+      "
     hostname: solana
     ports:
       - "8899:8899"
