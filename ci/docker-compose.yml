@@ -5,7 +5,7 @@ services:
 #    command: ["sleep", "infinity"]
     command: >
       bash -c "
-      ulimit -n 10000 &
+      ulimit -n 100 &
       echo =========================== &
       ulimit -n &
       echo =========================== &
