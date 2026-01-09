@@ -3,7 +3,7 @@ services:
     container_name: solana
     image: solana:latest
 #    command: ["sleep", "infinity"]
-    command: bash -c "ulimit -n 10000 && ulimit -n && ulimit -n && ulimit -n"
+    command: bash -c "ulimit -n 1000000 && ulimit -n"
 
     hostname: solana
     ports:
