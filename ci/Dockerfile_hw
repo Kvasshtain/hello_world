@@ -17,7 +17,7 @@ ENV PATH=${PATH}:/root/.local/share/solana/install/active_release/bin
 
 COPY hello_world /opt/hello_world
 
-WORKDIR /opt/hello_world/
+WORKDIR /opt/hello_world/program
 
 RUN cargo build-sbf
 
@@ -51,12 +51,13 @@ RUN echo "solana"
 #
 #RUN cargo build-sbf
 #
-#FROM anzaxyz/agave:v2.1.7
-#COPY --from=build /opt/hello_world/target/deploy/hello_world.so /opt/
-#COPY --from=build /opt/hello_world/ci /opt/ci
-#RUN chmod +x /opt/ci/start_solana.sh
-#
-#ENTRYPOINT [ "/opt/ci/start_solana.sh" ]
+
+FROM anzaxyz/agave:v2.1.7
+COPY --from=build /opt/hello_world/target/deploy/hello_world.so /opt/
+COPY --from=build /opt/hello_world/ci /opt/ci
+RUN chmod +x /opt/ci/start_solana.sh
+
+ENTRYPOINT [ "/opt/ci/start_solana.sh" ]
 
 
 
