@@ -23,5 +23,5 @@ pub async fn internal_transfer_ix<'a>(
         State::balance_key(&context.program_id, &context.keypair.pubkey(), &mint);
     let (to_key, _seed) = State::balance_key(&context.program_id, &to, &mint);
 
-    Ok(context.compose_ix(&data.as_slice(), &[&signer_key, &to_key]))
+    Ok(context.compose_ix(&data.as_slice(), &[signer_key, to_key]))
 }

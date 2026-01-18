@@ -31,10 +31,10 @@ impl<'a> Context<'a> {
         })
     }
 
-    pub fn compose_ix(&self, data: &[u8], pubkeys: &[&Pubkey]) -> Instruction {
+    pub fn compose_ix(&self, data: &[u8], pubkeys: &[Pubkey]) -> Instruction {
         let mut accounts: Vec<AccountMeta> = pubkeys
             .iter()
-            .map(|&pubkey| AccountMeta::new(*pubkey, false))
+            .map(|&pubkey| AccountMeta::new(pubkey, false))
             .collect();
 
         accounts.insert(0, AccountMeta::new(self.keypair.pubkey(), true));
@@ -80,5 +80,20 @@ impl<'a> Context<'a> {
         let account_state = AccountState::from_account_mut(&info)?;
 
         Ok(account_state.balance)
+    }
+
+    pub fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
+        if size == 0 {
+            panic!("chunk size must be greater than zero");
+        }
+
+        let mut chunks = vec![];
+
+        while !vec.is_empty() {
+            let x = vec.drain(..size.min(vec.len())).collect::<Vec<_>>();
+            chunks.push(x);
+        }
+
+        chunks
     }
 }

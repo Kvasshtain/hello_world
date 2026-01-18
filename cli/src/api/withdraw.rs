@@ -40,14 +40,14 @@ pub async fn withdraw<'a>(
     let ix = context.compose_ix(
         &data.as_slice(),
         &[
-            &user_ata,
-            &balance_key,
-            &wallet,
-            &wallet_ata,
-            &spl_token::ID,
-            &spl_associated_token_account::ID,
-            &mint,
-            &to,
+            user_ata,
+            balance_key,
+            wallet,
+            wallet_ata,
+            spl_token::ID,
+            spl_associated_token_account::ID,
+            mint,
+            to,
         ],
     );
 

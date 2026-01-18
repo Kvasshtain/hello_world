@@ -14,7 +14,7 @@ pub async fn resize<'a>(context: Context<'a>, seed: String, size: u64) -> Result
 
     let (resized, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &context.program_id);
 
-    let ix = context.compose_ix(&data.as_slice(), &[&resized]);
+    let ix = context.compose_ix(&data.as_slice(), &[resized]);
 
     let tx = context.compose_tx(&[ix]).await?;
 

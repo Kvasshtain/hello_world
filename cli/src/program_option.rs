@@ -94,4 +94,12 @@ pub enum Cmd {
         /// Tokens to distribute.
         amount: u64,
     },
+    MultipleTransfer {
+        /// Tokens to send.
+        amount: u64,
+        /// Mint account pubkey.
+        mint: Pubkey,
+        /// Destination account pubkey.
+        tos_dir_path: String,
+    },
 }

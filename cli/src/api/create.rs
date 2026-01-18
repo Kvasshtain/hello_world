@@ -21,7 +21,7 @@ pub async fn create<'a>(
 
     let (new, _bump) = Pubkey::find_program_address(&[&*seed.as_bytes()], &context.program_id);
 
-    let ix = context.compose_ix(&data.as_slice(), &[&new]);
+    let ix = context.compose_ix(&data.as_slice(), &[new]);
 
     let tx = context.compose_tx(&[ix]).await?;
 

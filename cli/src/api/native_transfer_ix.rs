@@ -13,5 +13,5 @@ pub async fn native_transfer_ix<'a>(
 
     data.extend(amount.to_le_bytes());
 
-    Ok(context.compose_ix(&data.as_slice(), &[&to]))
+    Ok(context.compose_ix(&data.as_slice(), &[to]))
 }

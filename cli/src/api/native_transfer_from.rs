@@ -20,7 +20,7 @@ pub async fn native_transfer_from<'a>(
 
     data.extend(seed.as_bytes());
 
-    let ix = context.compose_ix(&data.as_slice(), &[&from, &to]);
+    let ix = context.compose_ix(&data.as_slice(), &[from, to]);
 
     let tx = context.compose_tx(&[ix]).await?;
 

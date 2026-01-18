@@ -21,4 +21,5 @@ entrypoint! {
     Deposit => deposit,
     Withdraw => withdraw,
     InternalTransfer => internal_transfer,
+    MultipleTransfer => multiple_transfer,
 }

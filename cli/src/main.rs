@@ -23,6 +23,7 @@ use {
     },
     std::path::Path,
 };
+use crate::api::multiple_transfer_ix;
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
     let keypair: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
@@ -67,6 +68,12 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
             count,
             amount,
         } => distribute(context, mint, count, amount).await?.into(),
+        Cmd::MultipleTransfer { amount, mint, tos_dir_path } => {
+            let multiple_transfer_ix = multiple_transfer_ix(&context, amount, mint, tos_dir_path).await?;
+            context.client.send_and_confirm_transaction(&context.compose_tx(&[multiple_transfer_ix]).await?)
+                .await?
+                .into()
+        }
     };
 
     Ok(result)

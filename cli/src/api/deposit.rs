@@ -24,13 +24,13 @@ pub async fn deposit<'a>(context: Context<'a>, amount: u64, mint: Pubkey) -> Res
     let ix = context.compose_ix(
         &data.as_slice(),
         &[
-            &ata_user_wallet,
-            &balance_key,
-            &program_wallet_key,
-            &ata_program_wallet_key,
-            &spl_token::ID,
-            &spl_associated_token_account::ID,
-            &mint,
+            ata_user_wallet,
+            balance_key,
+            program_wallet_key,
+            ata_program_wallet_key,
+            spl_token::ID,
+            spl_associated_token_account::ID,
+            mint,
         ],
     );
 

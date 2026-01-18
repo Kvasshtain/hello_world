@@ -63,20 +63,20 @@ pub async fn batch<'a>(
     Ok(results)
 }
 
-fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
-    if size == 0 {
-        panic!("chunk size must be greater than zero");
-    }
-
-    let mut chunks = vec![];
-
-    while !vec.is_empty() {
-        let x = vec.drain(..size.min(vec.len())).collect::<Vec<_>>();
-        chunks.push(x);
-    }
-
-    chunks
-}
+// fn into_chunks<T>(mut vec: Vec<T>, size: usize) -> Vec<Vec<T>> {
+//     if size == 0 {
+//         panic!("chunk size must be greater than zero");
+//     }
+//
+//     let mut chunks = vec![];
+//
+//     while !vec.is_empty() {
+//         let x = vec.drain(..size.min(vec.len())).collect::<Vec<_>>();
+//         chunks.push(x);
+//     }
+//
+//     chunks
+// }
 
 async fn save_recipients(
     tasks: usize,
@@ -156,7 +156,7 @@ pub async fn distribute<'a>(
 
     let mut sigs = vec![];
 
-    for i in into_chunks(recipients, CHUNK_SIZE) {
+    for i in Context::into_chunks(recipients, CHUNK_SIZE) {
         sigs.push(batch(genesis_context.clone(), mint, i, amount, 0).await?)
     }
 
