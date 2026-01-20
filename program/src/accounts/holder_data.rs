@@ -1,3 +1,4 @@
+use solana_pubkey::Pubkey;
 use {
     crate::{
         accounts::{cast, cast_mut, Data},
@@ -9,11 +10,16 @@ use {
 };
 
 #[repr(C, packed)]
-pub struct AccountState {
-        pub balance: u64,
+pub struct HolderData {
+    pub amount: u64,
+    pub tos_len: usize,
+
+    pub mint: Pubkey,
+
+    pub tos: Vec<Pubkey>,
 }
 
-impl Data for AccountState {
+impl Data for HolderData {
     type Item<'a> = Ref<'a, Self>;
     type ItemMut<'a> = RefMut<'a, Self>;
 
