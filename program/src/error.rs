@@ -8,6 +8,9 @@ pub enum Error {
     #[error("Calculation overflow")]
     CalculationOverflow,
 
+    #[error("Calculation underflow")]
+    CalculationUnderflow,
+
     #[error("account not found: {0}")]
     AccountNotFound(Pubkey),
 

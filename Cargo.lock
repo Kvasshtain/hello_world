@@ -2248,6 +2248,7 @@ dependencies = [
  "anyhow",
  "async-std",
  "clap",
+ "futures",
  "futures-util",
  "glob",
  "hello_world",

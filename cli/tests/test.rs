@@ -26,7 +26,7 @@ use {
     },
     std::{fs, path::Path, str::FromStr},
 };
-use memo_cli::api::{deposit, multiple_transfer_ix};
+use memo_cli::api::{deposit, multiple_transfer};
 
 async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
     let latest_blockhash = client.get_latest_blockhash().await.unwrap();
@@ -247,11 +247,7 @@ async fn test2(#[case] count: u64) {
 
     let _ = deposit(context.clone(), count * amount, mint_pubkey).await;
 
-    let multiple_transfer_ix = multiple_transfer_ix(&context, amount, mint_pubkey, tos_dir_path.parse().unwrap()).await.unwrap();
-
-    context.client.send_and_confirm_transaction(&context.compose_tx(&[multiple_transfer_ix]).await.unwrap())
-        .await
-        .unwrap();
+    multiple_transfer(&context, amount, mint_pubkey, tos_dir_path.parse().unwrap()).await.unwrap();
 
     let dir = fs::read_dir(tos_dir_path).unwrap();
 

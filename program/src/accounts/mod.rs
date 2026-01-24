@@ -1,3 +1,4 @@
+pub mod lock;
 pub mod account_state;
 pub mod holder_data;
 
@@ -17,6 +18,8 @@ pub trait Data {
     type ItemMut<'a>;
     fn from_account<'a>(info: &'a AccountInfo) -> Result<Self::Item<'a>>;
     fn from_account_mut<'a>(info: &'a AccountInfo) -> Result<Self::ItemMut<'a>>;
+    fn size(info: &AccountInfo) -> usize;
+    fn offset(info: &AccountInfo) -> usize;
 }
 
 pub fn cast<'a, T>(info: &'a AccountInfo, offset: usize, len: usize) -> Result<Ref<'a, T>> {

@@ -16,7 +16,7 @@ use {
 use crate::api::deposit;
 
 pub const LAMPORTS: u64 = 1000000000;
-const CHUNK_SIZE: usize = 300;
+pub const CHUNK_SIZE: usize = 300;
 
 pub async fn batch<'a>(
     context: Context<'a>,

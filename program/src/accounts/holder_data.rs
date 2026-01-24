@@ -11,12 +11,13 @@ use {
 
 #[repr(C, packed)]
 pub struct HolderData {
-    pub amount: u64,
-    pub tos_len: usize,
-
+    // pub amount: u64,
+    // pub tos_len: usize,
+    
+    pub signer: [u8; 32],
     pub mint: Pubkey,
 
-    pub tos: Vec<Pubkey>,
+    //pub tos: Vec<Pubkey>,
 }
 
 impl Data for HolderData {
@@ -29,5 +30,13 @@ impl Data for HolderData {
 
     fn from_account_mut<'a>(info: &'a AccountInfo) -> Result<Self::ItemMut<'a>, Error> {
         cast_mut(info, 0, size_of::<Self>())
+    }
+
+    fn size(_info: &AccountInfo) -> usize {
+        size_of::<Self>()
+    }
+
+    fn offset(_info: &AccountInfo) -> usize {
+        0
     }
 }

@@ -8,10 +8,12 @@ pub mod native_transfer_from;
 pub mod native_transfer_ix;
 pub mod resize;
 pub mod withdraw;
-pub mod multiple_transfer_ix;
+pub mod multiple_transfer;
+mod lock_ix;
+mod unlock_ix;
 
 pub use {
     allocate::*, assign::*, create::*, deposit::*, distribute::*,
     internal_transfer_ix::*, native_transfer_from::*, native_transfer_ix::*,
-    resize::*, withdraw::*, multiple_transfer_ix::*,
+    resize::*, withdraw::*, multiple_transfer::*,
 };

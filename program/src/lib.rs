@@ -22,4 +22,6 @@ entrypoint! {
     Withdraw => withdraw,
     InternalTransfer => internal_transfer,
     MultipleTransfer => multiple_transfer,
+    Lock => lock,
+    Unlock => unlock,
 }
