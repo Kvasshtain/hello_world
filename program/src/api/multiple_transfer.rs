@@ -10,64 +10,6 @@ use {
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
     std::mem,
 };
-use crate::accounts::holder_data::HolderData;
-
-// pub fn start_multiple_transfer<'a>(
-//     program: &'a Pubkey,
-//     accounts: &'a [AccountInfo<'a>],
-//     data: &[u8],
-// ) -> ProgramResult {
-//     msg!("start_multiple_transfer");
-//
-//     if data.len() < PUBKEY_BYTES + mem::size_of::<u64>() {
-//         return Err(ProgramError::InvalidInstructionData);
-//     }
-//
-//     if (data.len() - mem::size_of::<u64>()) % PUBKEY_BYTES != 0 {
-//         return Err(ProgramError::InvalidInstructionData);
-//     }
-//
-//     let (amount_bytes, rest) = data.split_at(mem::size_of::<u64>());
-//     let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
-//
-//     let (tos_len_bytes, rest) = rest.split_at(mem::size_of::<u64>());
-//     let tos_len = u64::from_le_bytes(tos_len_bytes.try_into().unwrap());
-//
-//     let (mint_bytes, rest) = rest.split_at(PUBKEY_BYTES);
-//     let mint_key = Pubkey::try_from(mint_bytes).unwrap();
-//
-//     let (tos_len_bytes, rest) = rest.split_at(mem::size_of::<usize>());
-//     let tos_len = usize::from_le_bytes(tos_len_bytes.try_into().unwrap());
-//
-//     if rest.len() < tos_len * PUBKEY_BYTES {
-//         msg!("Error2");
-//         return Err(ProgramError::InvalidInstructionData);
-//     }
-//
-//     let mut tos = vec![];
-//
-//     for i in 0..tos_len {
-//         let tos_bytes = &rest[i * PUBKEY_BYTES .. (i+1) * PUBKEY_BYTES];
-//         tos.push(Pubkey::try_from(tos_bytes).unwrap());
-//     }
-//
-//
-//
-//
-//     let state = State::new(program, accounts)?;
-//
-//     let collector = state.holder(&mint_key)?;
-//
-//     let mut collector_data = HolderData::from_account_mut(collector)?;
-//
-//     collector_data.amount = amount;
-//     collector_data.tos_len = tos_len;
-//     collector_data.mint = mint_key;
-//     collector_data.tos = tos;
-//
-//
-//     Ok(())
-// }
 
 pub fn multiple_transfer<'a>(
     program: &'a Pubkey,
@@ -98,7 +40,7 @@ pub fn multiple_transfer<'a>(
     let mut tos = vec![];
 
     for i in 0..tos_len {
-        let tos_bytes = &rest[i * PUBKEY_BYTES .. (i+1) * PUBKEY_BYTES];
+        let tos_bytes = &rest[i * PUBKEY_BYTES..(i + 1) * PUBKEY_BYTES];
         tos.push(Pubkey::try_from(tos_bytes).unwrap());
     }
 
@@ -109,7 +51,6 @@ pub fn multiple_transfer<'a>(
     let mut from = AccountState::from_account_mut(from_pda)?;
 
     for to_key in &tos {
-
         msg!("FOR");
 
         let to_pda = state.balance_info(&to_key, &mint_key)?;
@@ -131,7 +72,10 @@ pub fn multiple_transfer<'a>(
 
         msg!("3!!!!");
 
-        to.balance = to.balance.checked_add(amount).ok_or(CalculationOverflow)?;
+        to.balance = to
+            .balance
+            .checked_add(amount)
+            .ok_or(CalculationOverflow)?;
 
         msg!("4!!!!");
     }

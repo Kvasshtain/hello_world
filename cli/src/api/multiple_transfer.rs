@@ -1,20 +1,39 @@
-use std::fs;
-use solana_sdk::signature::{read_keypair_file, Keypair, Signature};
-use solana_sdk::transaction::Transaction;
+use solana_sdk::transaction::{Transaction, TransactionError};
+use solana_transaction_status_client_types::UiTransactionEncoding;
+use crate::api::unlock_ix::{unlock_ix};
+use crate::api::unlock_err_ix::{unlock_err_ix};
 use {
-    crate::context::Context,
+    crate::{api::lock_ix::lock_ix, context::Context},
     anyhow::Result,
-    solana_sdk::{pubkey::Pubkey, signature::Signer},
+    solana_sdk::{
+        pubkey::Pubkey,
+        signature::{read_keypair_file, Keypair, Signature, Signer},
+    },
+    std::fs,
 };
-use crate::api::lock_ix::lock_ix;
+use hello_world::{Instruction, State};
+use crate::api::multiple_transfer_ix::multiple_transfer_ix;
 
-const MAX_COUNT: usize = 15;
+async fn process_chunks<'a>(
+    context: &Context<'a>,
+    mint: Pubkey,
+    tos: &[Pubkey],
+    func: fn(&Context, Pubkey, Pubkey) -> solana_sdk::instruction::Instruction,
+) -> Result<Vec<Vec<Signature>>> {
+    let mut sigs = vec![];
+    for chunk in Context::into_chunks(tos.to_vec(), crate::api::distribute::CHUNK_SIZE) {
+        sigs.push(batch(context.clone(), mint, chunk, func).await?);
+    }
+    Ok(sigs)
+}
+
+
 
 pub async fn batch<'a>(
     context: Context<'a>,
     mint: Pubkey,
-    mut pubkeys: Vec<Pubkey>,
-    func: fn(&Context,Pubkey, Pubkey) -> solana_sdk::instruction::Instruction,
+    pubkeys: Vec<Pubkey>,
+    func: fn(&Context, Pubkey, Pubkey) -> solana_sdk::instruction::Instruction,
 ) -> Result<Vec<Signature>> {
     if pubkeys.is_empty() {
         return Ok(vec![]);
@@ -37,25 +56,16 @@ pub async fn batch<'a>(
         futs.push(context.client.send_and_confirm_transaction(tx));
     }
 
-    // let txs: Vec<Transaction> = futures::future::try_join_all(
-    //     ixs.into_iter().map(|ix| context.compose_tx(&[ix]))
-    // ).await?;
-    //
-    // let futs: Vec<_> = txs
-    //     .iter()
-    //     .map(|tx| context.client.send_and_confirm_transaction(tx))
-    //     .collect();
-
     let results = futures_util::future::join_all(futs)
         .await
-        .into_iter()
-        //.collect::<Result<Vec<_>>>()?
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
 
     Ok(results)
 }
+
+
 
 pub async fn multiple_transfer<'a>(
     context: &Context<'a>,
@@ -64,14 +74,17 @@ pub async fn multiple_transfer<'a>(
     tos_dir_path: String,
 ) -> Result<Vec<Signature>> {
     let dir = fs::read_dir(tos_dir_path)?;
+    let mut accaunts: Vec<Pubkey> = vec![];
     let mut tos: Vec<Pubkey> = vec![];
     let mut tos_len: usize = 0;
+
+    accaunts.push(context.keypair.pubkey());
 
     for entry in dir {
         let entry = entry?;
         let file_type = entry.file_type()?;
 
-        if file_type.is_dir(){
+        if file_type.is_dir() {
             continue;
         }
 
@@ -80,22 +93,43 @@ pub async fn multiple_transfer<'a>(
         let path = entry.path();
         let keypair: Keypair = read_keypair_file(path).unwrap();
         let to = keypair.pubkey();
+        accaunts.push(to);
         tos.push(to);
     }
 
     let mut sigs = vec![];
 
-    for i in Context::into_chunks(tos, crate::api::distribute::CHUNK_SIZE) {
-        sigs.push(batch(context.clone(), mint, i, lock_ix as fn(&Context,Pubkey, Pubkey) -> solana_sdk::instruction::Instruction).await?)
+    sigs.extend(process_chunks(context, mint, &accaunts, lock_ix).await?);
+
+    let chunks = Context::into_chunks(tos.to_vec(), crate::api::multiple_transfer_ix::MAX_COUNT);
+
+    let mut error: Option<TransactionError> = None;
+
+    for chunk in chunks {
+        let ix = multiple_transfer_ix(context, amount, mint, chunk).await?;
+
+        let tx = context.compose_tx(&[ix]).await?;
+
+        let sig: Signature = context.client.send_and_confirm_transaction(&tx).await?;
+
+        let result = context.client.get_transaction(
+            &sig,
+            UiTransactionEncoding::Json,
+        ).await?;
+
+        if let Some(err) = result.transaction.meta.and_then(|m| m.err) {
+            error = Option::from(err);
+            break;
+        }
+
+        sigs.push(vec![sig]);
     }
 
-
-    //^!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-    // for i in Context::into_chunks(tos.clone(), crate::api::distribute::CHUNK_SIZE) {
-    //     sigs.push(batch(context.clone(), mint, i, unlock_ix as fn(&Context,Pubkey, Pubkey) -> solana_sdk::instruction::Instruction).await?)
-    // }
+    if let Some(err) = error {
+        sigs.extend(process_chunks(context, mint, &accaunts, unlock_err_ix).await?);
+    } else {
+        sigs.extend(process_chunks(context, mint, &accaunts, unlock_ix).await?);
+    }
 
     let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();
 

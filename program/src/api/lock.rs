@@ -1,6 +1,6 @@
 use {
     crate::{
-        accounts::{account_state::Lock, Data},
+        accounts::{account_state::AccountState, Data},
         state::State,
     },
     solana_msg::msg,
@@ -8,6 +8,8 @@ use {
     solana_program_error::ProgramError,
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
 };
+use crate::accounts::holder_data::HolderData;
+use crate::error::Error::AccountLocked;
 
 pub fn lock<'a>(
     program: &'a Pubkey,
@@ -29,11 +31,14 @@ pub fn lock<'a>(
 
     let state = State::new(program, accounts)?;
 
-    let holder_pda = state.holder(&mint_key);
     let balance_pda = state.balance_info(&pubkey, &mint_key)?;
 
-    let mut to = Lock::from_account_mut(balance_pda)?;
-    to.lock(&holder_pda?.key)?;
+    let mut account_state = AccountState::from_account_mut(balance_pda)?;
+    if account_state.get_lock()? {
+        return Err(AccountLocked.into());
+    }
 
+    account_state.lock()?;
+    
     Ok(())
 }

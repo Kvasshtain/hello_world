@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        error::Error::CalculationOverflow,
+        error::Error::{AccountLocked, CalculationOverflow},
         state::State,
     },
     solana_msg::msg,
@@ -46,6 +46,11 @@ pub fn deposit<'a>(
 
     let user_pda = state.balance_info(state.signer().key, &mint_key)?;
 
+    let mut account_state = AccountState::from_account_mut(user_pda)?;
+    if account_state.get_lock()? {
+        return Err(AccountLocked.into());
+    }
+
     let (ata_wallet, _bump) = State::spl_ata(&wallet.key, &mint_key);
 
     let (ata_user_wallet_key, _bump) = State::spl_ata(state.signer().key, &mint_key);
@@ -61,7 +66,6 @@ pub fn deposit<'a>(
 
     invoke_signed(&ix, &state.infos(&ix)?, &[])?;
 
-    let mut account_state = AccountState::from_account_mut(user_pda)?;
     account_state.balance = account_state
         .balance
         .checked_add(amount)

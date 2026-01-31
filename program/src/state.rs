@@ -1,8 +1,9 @@
+use crate::accounts::holder_data::HolderData;
 use {
     crate::{
         accounts::account_state::AccountState,
         base::Base,
-        config::{BALANCE_ACCOUNT, WALLET_SEED, HOLDER_ACCOUNT},
+        config::{BALANCE_ACCOUNT, HOLDER_ACCOUNT, WALLET_SEED},
         error::{
             Error,
             Error::{AccountNotFound, InvalidSigner},
@@ -17,7 +18,7 @@ use {
     spl_associated_token_account::tools::account::create_pda_account,
     std::{collections::HashMap, mem, ops::Deref},
 };
-use crate::accounts::holder_data::HolderData;
+use crate::accounts::{account_state, Data};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -174,11 +175,15 @@ impl<'a> State<'a> {
     pub fn balance_info(&self, user_key: &Pubkey, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
         let pubkey_bump_seeds = State::balance_key(self.program_id, user_key, mint);
 
-        self.pda(
+        let pda = self.pda(
             pubkey_bump_seeds,
             mem::size_of::<AccountState>(),
             self.program_id,
-        )
+        )?;
+        
+        AccountState::init(pda)?;
+        
+        Ok(pda)
     }
 
     pub fn holder_key(
@@ -197,14 +202,17 @@ impl<'a> State<'a> {
         State::key_seeds(program_id, seeds)
     }
 
-
     pub fn holder(&self, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
         let pubkey_bump_seeds = State::holder_key(self.program_id, self.signer.key, mint);
 
-        self.pda(
+        let pda = self.pda(
             pubkey_bump_seeds,
             mem::size_of::<HolderData>(),
             self.program_id,
-        )
+        )?;
+
+        HolderData::init(pda)?;
+
+        Ok(pda)
     }
 }

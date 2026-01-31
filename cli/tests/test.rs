@@ -1,7 +1,8 @@
+use futures_util::future::join_all;
+use memo_cli::api::{deposit, multiple_transfer};
+use solana_sdk::signature::write_keypair_file;
 use std::io;
 use std::sync::Arc;
-use futures_util::future::join_all;
-use solana_sdk::signature::write_keypair_file;
 use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 use {
@@ -26,7 +27,6 @@ use {
     },
     std::{fs, path::Path, str::FromStr},
 };
-use memo_cli::api::{deposit, multiple_transfer};
 
 async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {
     let latest_blockhash = client.get_latest_blockhash().await.unwrap();
@@ -152,7 +152,7 @@ async fn save_recipients(
     tos_dir_path: &str,
     tasks: usize,
     recipients: Vec<Keypair>,
-) -> Vec<JoinHandle<()>>{
+) -> Vec<JoinHandle<()>> {
     let semaphore = Arc::new(Semaphore::new(tasks));
 
     let mut jh = vec![];
@@ -183,8 +183,8 @@ async fn save_recipients(
 fn clean_directory(path_str: &str) -> io::Result<()> {
     let path = Path::new(path_str);
 
-    if !path.exists() || !path.is_dir(){
-        return Ok(())
+    if !path.exists() || !path.is_dir() {
+        return Ok(());
     }
 
     for entry in fs::read_dir(path)? {
@@ -247,7 +247,9 @@ async fn test2(#[case] count: u64) {
 
     let _ = deposit(context.clone(), count * amount, mint_pubkey).await;
 
-    multiple_transfer(&context, amount, mint_pubkey, tos_dir_path.parse().unwrap()).await.unwrap();
+    multiple_transfer(&context, amount, mint_pubkey, tos_dir_path.parse().unwrap())
+        .await
+        .unwrap();
 
     let dir = fs::read_dir(tos_dir_path).unwrap();
 

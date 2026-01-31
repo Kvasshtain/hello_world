@@ -9,7 +9,7 @@ use {
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
 };
 
-pub fn unlock<'a>(
+pub fn unlock_err<'a>(
     program: &'a Pubkey,
     accounts: &'a [AccountInfo<'a>],
     data: &[u8],
@@ -32,7 +32,7 @@ pub fn unlock<'a>(
     let balance_pda = state.balance_info(&pubkey, &mint_key)?;
 
     let mut account_state = AccountState::from_account_mut(balance_pda)?;
-    account_state.unlock();
+    account_state.unlock_err();
 
     Ok(())
 }

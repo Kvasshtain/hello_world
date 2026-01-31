@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        error::Error::{CalculationOverflow, InsufficientBalance},
+        error::Error::{AccountLocked, CalculationOverflow, InsufficientBalance},
         state::State,
     },
     solana_msg::msg,
@@ -62,6 +62,11 @@ pub fn withdraw<'a>(
 
     let user_pda = state.balance_info(state.signer().key, &mint_key)?;
 
+    let mut account_state = AccountState::from_account_mut(user_pda)?;
+    if account_state.get_lock()? {
+        return Err(ProgramError::from(AccountLocked));
+    }
+
     let (ata_wallet, _bump) = State::spl_ata(&wallet.key, &mint_key);
 
     let ix = spl_token::instruction::transfer(
@@ -72,8 +77,6 @@ pub fn withdraw<'a>(
         &[],
         amount,
     )?;
-
-    let mut account_state = AccountState::from_account_mut(user_pda)?;
 
     if account_state.balance < amount {
         return Err(ProgramError::from(InsufficientBalance));

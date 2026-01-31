@@ -1,6 +1,6 @@
 use {
     crate::{
-        api::{internal_transfer_ix, native_transfer_ix},
+        api::{deposit, internal_transfer_ix, native_transfer_ix},
         context::Context,
     },
     anyhow::Result,
@@ -13,7 +13,6 @@ use {
     std::{path::Path, sync::Arc},
     tokio::{sync::Semaphore, task::JoinHandle},
 };
-use crate::api::deposit;
 
 pub const LAMPORTS: u64 = 1000000000;
 pub const CHUNK_SIZE: usize = 300;
@@ -43,7 +42,9 @@ pub async fn batch<'a>(
     let native_transfer_ix = native_transfer_ix(&context, new_lamports, to.pubkey()).await;
     let internal_transfer_ix = internal_transfer_ix(&context, new_amount, mint, to.pubkey()).await;
 
-    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
+    let tx = context
+        .compose_tx(&[native_transfer_ix?, internal_transfer_ix?])
+        .await?;
 
     let result = vec![context.client.send_and_confirm_transaction(&tx).await?];
 
@@ -130,7 +131,9 @@ pub async fn distribute<'a>(
     let internal_transfer_ix =
         internal_transfer_ix(&context, count * amount, mint, genesis.pubkey()).await;
 
-    let tx = context.compose_tx(&[native_transfer_ix?, internal_transfer_ix?]).await?;
+    let tx = context
+        .compose_tx(&[native_transfer_ix?, internal_transfer_ix?])
+        .await?;
 
     context.client.send_and_confirm_transaction(&tx).await?;
 

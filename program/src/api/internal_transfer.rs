@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        error::Error::CalculationOverflow,
+        error::Error::{AccountLocked, CalculationOverflow},
         state::State,
     },
     solana_msg::msg,
@@ -35,7 +35,20 @@ pub fn internal_transfer<'a>(
 
     let from_pda = state.balance_info(state.signer().key, &mint_key)?;
 
+    let mut from_account_state = AccountState::from_account_mut(from_pda)?;
+    if from_account_state.get_lock()? {
+        return Err(AccountLocked.into());
+    }
+
     let to_pda = state.balance_info(&to_key, &mint_key)?;
+
+    let mut to_account_state = AccountState::from_account_mut(to_pda)?;
+    if to_account_state.get_lock()? {
+        return Err(AccountLocked.into());
+    }
+
+    drop(from_account_state);
+    drop(to_account_state);
 
     let mut from = AccountState::from_account_mut(from_pda)?;
 
@@ -43,6 +56,8 @@ pub fn internal_transfer<'a>(
         .balance
         .checked_sub(amount)
         .ok_or(CalculationOverflow)?;
+
+    drop(from);
 
     let mut to = AccountState::from_account_mut(to_pda)?;
     to.balance = to.balance.checked_add(amount).ok_or(CalculationOverflow)?;

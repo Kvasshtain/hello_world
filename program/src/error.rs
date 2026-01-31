@@ -25,6 +25,9 @@ pub enum Error {
 
     #[error("Insufficient account balance")]
     InsufficientBalance,
+
+    #[error("Account is locked")]
+    AccountLocked,
 }
 
 impl From<ProgramError> for Error {

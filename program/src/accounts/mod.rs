@@ -1,6 +1,6 @@
-pub mod lock;
 pub mod account_state;
 pub mod holder_data;
+mod lock;
 
 use {
     crate::error::Error::InvalidDataLength,

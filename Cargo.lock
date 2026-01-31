@@ -2255,6 +2255,7 @@ dependencies = [
  "rstest",
  "serial_test",
  "solana-client",
+ "solana-instruction",
  "solana-sdk",
  "solana-transaction-status-client-types",
  "spl-associated-token-account",

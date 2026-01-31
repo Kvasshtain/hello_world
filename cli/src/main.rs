@@ -3,11 +3,12 @@ pub mod context;
 pub mod program_option;
 pub mod transaction_log;
 
+use crate::api::multiple_transfer;
 use {
     crate::{
         api::{
-            allocate, assign, create, deposit, distribute,
-            internal_transfer_ix, native_transfer_from, native_transfer_ix, resize, withdraw,
+            allocate, assign, create, deposit, distribute, internal_transfer_ix,
+            native_transfer_from, native_transfer_ix, resize, withdraw,
         },
         context::Context,
         program_option::{Args, Cmd},
@@ -23,7 +24,6 @@ use {
     },
     std::path::Path,
 };
-use crate::api::multiple_transfer;
 
 pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
     let keypair: Keypair = read_keypair_file(Path::new(args.keypair_path.as_str())).unwrap();
@@ -41,7 +41,9 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
         Cmd::Resize { size, seed } => resize(context, seed, size).await?.into(),
         Cmd::Transfer { amount, to } => {
             let native_transfer_ix = native_transfer_ix(&context, amount, to).await?;
-            context.client.send_and_confirm_transaction(&context.compose_tx(&[native_transfer_ix]).await?)
+            context
+                .client
+                .send_and_confirm_transaction(&context.compose_tx(&[native_transfer_ix]).await?)
                 .await?
                 .into()
         }
@@ -59,7 +61,9 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
         Cmd::Withdraw { amount, mint, to } => withdraw(context, amount, mint, to).await?.into(),
         Cmd::InternalTransfer { amount, mint, to } => {
             let internal_transfer_ix = internal_transfer_ix(&context, amount, mint, to).await?;
-            context.client.send_and_confirm_transaction(&context.compose_tx(&[internal_transfer_ix]).await?)
+            context
+                .client
+                .send_and_confirm_transaction(&context.compose_tx(&[internal_transfer_ix]).await?)
                 .await?
                 .into()
         }
@@ -68,7 +72,13 @@ pub async fn send_tx(args: Args, client: &RpcClient) -> Result<SigEnum> {
             count,
             amount,
         } => distribute(context, mint, count, amount).await?.into(),
-        Cmd::MultipleTransfer { amount, mint, tos_dir_path } => multiple_transfer(&context, amount, mint, tos_dir_path).await?.into(),
+        Cmd::MultipleTransfer {
+            amount,
+            mint,
+            tos_dir_path,
+        } => multiple_transfer(&context, amount, mint, tos_dir_path)
+            .await?
+            .into(),
     };
 
     Ok(result)

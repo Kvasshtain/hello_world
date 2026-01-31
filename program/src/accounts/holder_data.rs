@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use solana_pubkey::Pubkey;
 use {
     crate::{
@@ -11,13 +12,26 @@ use {
 
 #[repr(C, packed)]
 pub struct HolderData {
-    // pub amount: u64,
-    // pub tos_len: usize,
-    
-    pub signer: [u8; 32],
-    pub mint: Pubkey,
+    pub balances: HashMap<[u8; 32], u64>,
+}
 
-    //pub tos: Vec<Pubkey>,
+impl HolderData {
+    pub fn init(info: &AccountInfo) -> Result<(), Error> {
+        let mut state = HolderData::from_account_mut(info)?;
+
+        *state = HolderData {
+            balances: HashMap::new(),
+        };
+
+        Ok(())
+    }
+
+    pub fn add(&mut self, pda: &Pubkey, balance: u64) -> Result<(), Error> {
+        let balances = unsafe { &mut *std::ptr::addr_of_mut!(self.balances) };
+        balances.insert(pda.to_bytes(), balance);
+
+        Ok(())
+    }
 }
 
 impl Data for HolderData {

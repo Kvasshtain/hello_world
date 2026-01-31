@@ -37,7 +37,7 @@ pub async fn withdraw<'a>(
 
     let (wallet_ata, _bump) = State::spl_ata(&wallet, &mint);
 
-    let ix = context.compose_ix(
+    let ix: solana_instruction::Instruction = context.compose_ix(
         &data.as_slice(),
         &[
             user_ata,

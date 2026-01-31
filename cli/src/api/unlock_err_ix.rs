@@ -4,13 +4,13 @@ use {
     crate::context::Context, hello_world::Instruction, solana_sdk::pubkey::Pubkey,
 };
 
-pub fn unlock_ix(
+pub fn unlock_err_ix(
     context: &Context,
     mint: Pubkey,
     pubkey: Pubkey,
 ) -> solana_sdk::instruction::Instruction {
-    let mut data = vec![Instruction::Unlock as u8];
-    
+    let mut data = vec![Instruction::UnlockErr as u8];
+
     data.extend(mint.to_bytes());
 
     data.extend(pubkey.to_bytes());

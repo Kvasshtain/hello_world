@@ -24,4 +24,5 @@ entrypoint! {
     MultipleTransfer => multiple_transfer,
     Lock => lock,
     Unlock => unlock,
+    UnlockErr => unlock_err,
 }
