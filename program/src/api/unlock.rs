@@ -1,3 +1,4 @@
+use std::mem;
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
@@ -8,6 +9,11 @@ use {
     solana_program_error::ProgramError,
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
 };
+use crate::accounts::account_lock::AccountLock;
+use crate::accounts::holder_data::HolderData;
+use crate::accounts::holder_lock::HolderLock;
+use crate::error::Error;
+use crate::error::Error::AccountLocked;
 
 pub fn unlock<'a>(
     program: &'a Pubkey,
@@ -16,23 +22,56 @@ pub fn unlock<'a>(
 ) -> ProgramResult {
     msg!("lock");
 
-    if data.len() < 2 * PUBKEY_BYTES {
+    if data.len() < 2 * PUBKEY_BYTES + mem::size_of::<u128>() {
         msg!("Error1");
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let (mint_bytes, pubkey_bytes) = data.split_at(PUBKEY_BYTES);
+    let (mint_bytes, rest) = data.split_at(PUBKEY_BYTES);
 
     let mint_key = Pubkey::try_from(mint_bytes).unwrap();
 
+    let (pubkey_bytes, rest) = rest.split_at(PUBKEY_BYTES);
+
     let pubkey = Pubkey::try_from(pubkey_bytes).unwrap();
+
+    let uid = u128::from_le_bytes(rest.try_into().unwrap());
 
     let state = State::new(program, accounts)?;
 
     let balance_pda = state.balance_info(&pubkey, &mint_key)?;
 
+    let mut account_lock = AccountLock::from_account_mut(balance_pda)?;
+
+    if !account_lock.get()? {
+        return Ok(());
+    }
+
+    let holder = state.holder(uid, &mint_key)?;
+
+    if (account_lock.holder != *holder.key) {
+        return Err(Error::WrongAccount.into());
+    }
+
+    let holder_lock = HolderLock::from_account_mut(holder)?;
+
+    if !HolderData::index_exist(holder, account_lock.index)? {
+        return Err(Error::WrongIndex.into());
+    }
+
+    if holder_lock.get()? {
+        return Err(AccountLocked.into());
+    }
+
+    //let account_state = AccountState::from_account(balance_pda)?;
+
+    //let index = HolderData::add(holder, account_state.balance)?;
+
     let mut account_state = AccountState::from_account_mut(balance_pda)?;
-    account_state.unlock();
+
+    account_state.balance = HolderData::get(holder, account_lock.index)?;
+
+    account_lock.unlock()?;
 
     Ok(())
 }

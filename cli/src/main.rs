@@ -3,12 +3,11 @@ pub mod context;
 pub mod program_option;
 pub mod transaction_log;
 
-use crate::api::multiple_transfer;
 use {
     crate::{
         api::{
             allocate, assign, create, deposit, distribute, internal_transfer_ix,
-            native_transfer_from, native_transfer_ix, resize, withdraw,
+            multiple_transfer, native_transfer_from, native_transfer_ix, resize, withdraw,
         },
         context::Context,
         program_option::{Args, Cmd},

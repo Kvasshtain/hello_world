@@ -1,8 +1,6 @@
 use hello_world::State;
 use solana_sdk::signature::Signer;
-use {
-    crate::context::Context, anyhow::Result, hello_world::Instruction, solana_sdk::pubkey::Pubkey,
-};
+use {crate::context::Context, hello_world::Instruction, solana_sdk::pubkey::Pubkey};
 
 pub fn lock_ix(
     context: &Context,

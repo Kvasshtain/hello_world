@@ -22,3 +22,4 @@ futures-util = "0.3.31"
 glob = "0.3.3"
 futures = "0.3.31"
 solana-instruction = "2.2.1"
+uuid = { version = "1.20.0", features = ["v4"] }

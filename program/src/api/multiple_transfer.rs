@@ -10,6 +10,8 @@ use {
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
     std::mem,
 };
+use crate::accounts::holder_data::HolderData;
+use crate::accounts::holder_lock::HolderLock;
 
 pub fn multiple_transfer<'a>(
     program: &'a Pubkey,
@@ -18,67 +20,39 @@ pub fn multiple_transfer<'a>(
 ) -> ProgramResult {
     msg!("multiple_transfer");
 
-    if data.len() < PUBKEY_BYTES + mem::size_of::<u64>() + mem::size_of::<usize>() {
+    if data.len() < PUBKEY_BYTES + mem::size_of::<u128>() + mem::size_of::<u64>() {
         msg!("Error1");
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let (amount_bytes, rest) = data.split_at(mem::size_of::<u64>());
-    let amount = u64::from_le_bytes(amount_bytes.try_into().unwrap());
-
-    let (mint_bytes, rest) = rest.split_at(PUBKEY_BYTES);
+    let (mint_bytes, rest) = data.split_at(PUBKEY_BYTES);
     let mint_key = Pubkey::try_from(mint_bytes).unwrap();
 
-    let (tos_len_bytes, rest) = rest.split_at(mem::size_of::<usize>());
-    let tos_len = usize::from_le_bytes(tos_len_bytes.try_into().unwrap());
+    let (uid_bytes, rest) = rest.split_at(mem::size_of::<u64>());
+    let uid = u128::from_le_bytes(uid_bytes.try_into().unwrap());
 
-    if rest.len() < tos_len * PUBKEY_BYTES {
-        msg!("Error2");
-        return Err(ProgramError::InvalidInstructionData);
-    }
-
-    let mut tos = vec![];
-
-    for i in 0..tos_len {
-        let tos_bytes = &rest[i * PUBKEY_BYTES..(i + 1) * PUBKEY_BYTES];
-        tos.push(Pubkey::try_from(tos_bytes).unwrap());
-    }
+    let amount = u64::from_le_bytes(rest.try_into().unwrap());
 
     let state = State::new(program, accounts)?;
 
-    let from_pda = state.balance_info(state.signer().key, &mint_key)?;
+    let holder = state.holder(uid, &mint_key)?;
 
-    let mut from = AccountState::from_account_mut(from_pda)?;
+    let mut holder_data = HolderData::from_account_mut(holder)?;
 
-    for to_key in &tos {
-        msg!("FOR");
+    let from_value = holder_data[0];
 
-        let to_pda = state.balance_info(&to_key, &mint_key)?;
+    let to_len = holder_data.len() as u64 - 1;
 
-        msg!("1!!!!");
-
-        let b = from.balance;
-
-        msg!("from.balance = {}", b);
-
-        from.balance = from
-            .balance
-            .checked_sub(amount)
-            .ok_or(CalculationOverflow)?;
-
-        msg!("2!!!!");
-
-        let mut to = AccountState::from_account_mut(to_pda)?;
-
-        msg!("3!!!!");
-
-        to.balance = to
-            .balance
-            .checked_add(amount)
-            .ok_or(CalculationOverflow)?;
-
-        msg!("4!!!!");
+    holder_data[0] = from_value.checked_sub(to_len * amount)
+        .ok_or(CalculationOverflow)?;
+    
+    for i in 1..to_len {
+        holder_data[i as usize] = holder_data[i as usize] + amount;
     }
+
+    let mut holder_lock = HolderLock::from_account_mut(holder)?;
+
+    holder_lock.unlock();
 
     Ok(())
 }

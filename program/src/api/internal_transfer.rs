@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        error::Error::{AccountLocked, CalculationOverflow},
+        error::Error::CalculationOverflow,
         state::State,
     },
     solana_msg::msg,
@@ -10,6 +10,8 @@ use {
     solana_pubkey::{Pubkey, PUBKEY_BYTES},
     std::mem,
 };
+use crate::accounts::account_lock::AccountLock;
+use crate::error::Error::AccountLocked;
 
 pub fn internal_transfer<'a>(
     program: &'a Pubkey,
@@ -35,20 +37,17 @@ pub fn internal_transfer<'a>(
 
     let from_pda = state.balance_info(state.signer().key, &mint_key)?;
 
-    let mut from_account_state = AccountState::from_account_mut(from_pda)?;
-    if from_account_state.get_lock()? {
+    let account_lock_from = AccountLock::from_account(from_pda)?;
+    if account_lock_from.get()? {
         return Err(AccountLocked.into());
     }
 
     let to_pda = state.balance_info(&to_key, &mint_key)?;
 
-    let mut to_account_state = AccountState::from_account_mut(to_pda)?;
-    if to_account_state.get_lock()? {
+    let account_lock_to = AccountLock::from_account(to_pda)?;
+    if account_lock_to.get()? {
         return Err(AccountLocked.into());
     }
-
-    drop(from_account_state);
-    drop(to_account_state);
 
     let mut from = AccountState::from_account_mut(from_pda)?;
 

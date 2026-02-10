@@ -1,7 +1,6 @@
-use crate::accounts::holder_data::HolderData;
 use {
     crate::{
-        accounts::account_state::AccountState,
+        accounts::{account_state::AccountState, holder_data::HolderData},
         base::Base,
         config::{BALANCE_ACCOUNT, HOLDER_ACCOUNT, WALLET_SEED},
         error::{
@@ -18,7 +17,6 @@ use {
     spl_associated_token_account::tools::account::create_pda_account,
     std::{collections::HashMap, mem, ops::Deref},
 };
-use crate::accounts::{account_state, Data};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -189,30 +187,32 @@ impl<'a> State<'a> {
     pub fn holder_key(
         program_id: &'a Pubkey,
         signer_key: &'a Pubkey,
+        uid: u128,
         mint: &'a Pubkey,
     ) -> (Pubkey, Seed) {
         let seeds = Seed {
             items: vec![
                 HOLDER_ACCOUNT.to_vec(),
                 signer_key.as_ref().to_vec(),
+                uid.to_le_bytes().to_vec(),
                 mint.as_ref().to_vec(),
             ],
         };
-
+    
         State::key_seeds(program_id, seeds)
     }
-
-    pub fn holder(&self, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
-        let pubkey_bump_seeds = State::holder_key(self.program_id, self.signer.key, mint);
-
+    
+    pub fn holder(&self, uid: u128, mint: &Pubkey) -> Result<&'a AccountInfo<'a>> {
+        let pubkey_bump_seeds = State::holder_key(self.program_id, self.signer.key, uid, mint);
+    
         let pda = self.pda(
             pubkey_bump_seeds,
             mem::size_of::<HolderData>(),
             self.program_id,
         )?;
-
+    
         HolderData::init(pda)?;
-
+    
         Ok(pda)
     }
 }

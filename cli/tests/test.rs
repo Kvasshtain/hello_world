@@ -1,20 +1,16 @@
-use futures_util::future::join_all;
-use memo_cli::api::{deposit, multiple_transfer};
-use solana_sdk::signature::write_keypair_file;
-use std::io;
-use std::sync::Arc;
-use tokio::sync::Semaphore;
-use tokio::task::JoinHandle;
 use {
-    memo_cli::{api::distribute, context::Context},
+    futures_util::future::join_all,
+    memo_cli::{
+        api::{deposit, distribute, multiple_transfer},
+        context::Context,
+    },
     rstest::*,
     solana_client::nonblocking::rpc_client::RpcClient,
     solana_sdk::{
         commitment_config::{CommitmentConfig, CommitmentLevel},
         program_pack::Pack,
         pubkey::Pubkey,
-        signature::Signer,
-        signature::{read_keypair_file, Keypair},
+        signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
         system_instruction::create_account,
         transaction::Transaction,
     },
@@ -25,7 +21,8 @@ use {
         instruction::{initialize_mint, mint_to},
         state::Mint,
     },
-    std::{fs, path::Path, str::FromStr},
+    std::{fs, io, path::Path, str::FromStr, sync::Arc},
+    tokio::{sync::Semaphore, task::JoinHandle},
 };
 
 async fn arrange(client: &RpcClient, keypair: &Keypair) -> Keypair {

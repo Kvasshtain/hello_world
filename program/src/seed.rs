@@ -1,4 +1,4 @@
-use borsh::{BorshDeserialize, BorshSerialize};
+use {borsh::{BorshDeserialize, BorshSerialize}};
 
 #[derive(BorshSerialize, BorshDeserialize, Default, Clone)]
 pub struct Seed {

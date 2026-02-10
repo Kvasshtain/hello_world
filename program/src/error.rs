@@ -20,7 +20,10 @@ pub enum Error {
     #[error("Account is not correct")]
     WrongAccount,
 
-    #[error("An solana program error: {0}")]
+    #[error("Wrong index")]
+    WrongIndex,
+
+    #[error("A solana program error: {0}")]
     ProgramError(ProgramError),
 
     #[error("Insufficient account balance")]
@@ -28,6 +31,21 @@ pub enum Error {
 
     #[error("Account is locked")]
     AccountLocked,
+
+    #[error("The AccountInfo has an invalid owner: {0}")]
+    InvalidOwner(Pubkey),
+
+    #[error("attempt to init an initialized account: {0}")]
+    AccountInitialized(Pubkey),
+
+    #[error("Invalid account type: {0}")]
+    InvalidAccountType(Pubkey),
+
+    #[error("Index out of range")]
+    IndexOutOfRange,
+
+    #[error("List is empty")]
+    ListIsEmpty,
 }
 
 impl From<ProgramError> for Error {

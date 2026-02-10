@@ -1,18 +1,23 @@
-use solana_sdk::transaction::{Transaction, TransactionError};
-use solana_transaction_status_client_types::UiTransactionEncoding;
-use crate::api::unlock_ix::{unlock_ix};
-use crate::api::unlock_err_ix::{unlock_err_ix};
 use {
-    crate::{api::lock_ix::lock_ix, context::Context},
     anyhow::Result,
+    crate::{
+        api::{
+            lock_ix::lock_ix,
+            multiple_transfer_ix::multiple_transfer_ix,
+            //unlock_err_ix::unlock_err_ix,
+            unlock_ix::unlock_ix,
+        },
+        context::Context,
+    },
     solana_sdk::{
         pubkey::Pubkey,
         signature::{read_keypair_file, Keypair, Signature, Signer},
+        transaction::TransactionError,
     },
+    solana_transaction_status_client_types::UiTransactionEncoding,
     std::fs,
 };
-use hello_world::{Instruction, State};
-use crate::api::multiple_transfer_ix::multiple_transfer_ix;
+use uuid::Uuid;
 
 async fn process_chunks<'a>(
     context: &Context<'a>,
@@ -78,6 +83,11 @@ pub async fn multiple_transfer<'a>(
     let mut tos: Vec<Pubkey> = vec![];
     let mut tos_len: usize = 0;
 
+
+    let uid = Uuid::new_v4().to_u128_le();
+
+
+
     accaunts.push(context.keypair.pubkey());
 
     for entry in dir {
@@ -125,11 +135,11 @@ pub async fn multiple_transfer<'a>(
         sigs.push(vec![sig]);
     }
 
-    if let Some(err) = error {
-        sigs.extend(process_chunks(context, mint, &accaunts, unlock_err_ix).await?);
-    } else {
-        sigs.extend(process_chunks(context, mint, &accaunts, unlock_ix).await?);
-    }
+    // if let Some(err) = error {
+    //     sigs.extend(process_chunks(context, mint, &accaunts, unlock_err_ix).await?);
+    // } else {
+    //     sigs.extend(process_chunks(context, mint, &accaunts, unlock_ix).await?);
+    // }
 
     let sigs = sigs.into_iter().flatten().collect::<Vec<_>>();
 

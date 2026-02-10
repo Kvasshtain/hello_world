@@ -1,9 +1,8 @@
-use std::fs;
-use solana_sdk::pubkey;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
-use hello_world::{Instruction, State};
-use crate::context::Context;
+use {
+    solana_sdk::{pubkey::Pubkey, signature::Signer},
+    hello_world::{Instruction, State},
+    crate::context::Context,
+};
 
 pub const MAX_COUNT: usize = 15;
 

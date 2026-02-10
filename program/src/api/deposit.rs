@@ -1,7 +1,7 @@
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
-        error::Error::{AccountLocked, CalculationOverflow},
+        error::Error::CalculationOverflow,
         state::State,
     },
     solana_msg::msg,
@@ -15,6 +15,8 @@ use {
     spl_associated_token_account_client::instruction::create_associated_token_account_idempotent,
     std::mem,
 };
+use crate::accounts::account_lock::AccountLock;
+use crate::error::Error::AccountLocked;
 
 pub fn deposit<'a>(
     program: &'a Pubkey,
@@ -47,7 +49,9 @@ pub fn deposit<'a>(
     let user_pda = state.balance_info(state.signer().key, &mint_key)?;
 
     let mut account_state = AccountState::from_account_mut(user_pda)?;
-    if account_state.get_lock()? {
+
+    let account_lock = AccountLock::from_account(user_pda)?;
+    if account_lock.get()? {
         return Err(AccountLocked.into());
     }
 

@@ -1,4 +1,4 @@
-use solana_pubkey::Pubkey;
+use {solana_pubkey::Pubkey};
 
 pub struct Base<'a> {
     pub program_id: &'a Pubkey,

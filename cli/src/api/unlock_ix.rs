@@ -1,7 +1,7 @@
-use hello_world::State;
-use solana_sdk::signature::Signer;
 use {
-    crate::context::Context, hello_world::Instruction, solana_sdk::pubkey::Pubkey,
+    crate::context::Context,
+    hello_world::{Instruction, State},
+    solana_sdk::{pubkey::Pubkey, signature::Signer},
 };
 
 pub fn unlock_ix(
