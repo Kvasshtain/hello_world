@@ -18,7 +18,9 @@ use crate::accounts::holder_lock::HolderLock;
 use crate::error::Error::WrongIndex;
 
 #[repr(C, packed)]
-pub struct HolderData {}
+pub struct HolderData {
+
+}
 
 impl HolderData {
     pub fn init(info: &AccountInfo) -> Result<(), Error> {

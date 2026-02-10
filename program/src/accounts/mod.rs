@@ -4,6 +4,7 @@ pub mod holder_lock;
 pub mod ver;
 pub mod account_type;
 pub mod account_lock;
+mod account;
 
 use std::ptr;
 use {

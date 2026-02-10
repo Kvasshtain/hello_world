@@ -20,6 +20,7 @@ spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-associated-token-account-client = { workspace = true }
 borsh = "0.10.4"
+indexmap = "2.6"
 
 [lib]
 crate-type = ["cdylib", "lib"]

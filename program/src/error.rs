@@ -46,6 +46,9 @@ pub enum Error {
 
     #[error("List is empty")]
     ListIsEmpty,
+
+    #[error("Invalid serialized data")]
+    InvalidData,
 }
 
 impl From<ProgramError> for Error {
