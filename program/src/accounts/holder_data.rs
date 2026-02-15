@@ -1,25 +1,33 @@
+use std::collections::BTreeMap;
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program_error::ProgramError;
+use solana_pubkey::Pubkey;
 use {
     crate::{
-        accounts::{cast, cast_mut, Data},
+        accounts::Data,
         error::Error,
     },
     solana_program::account_info::AccountInfo,
-    solana_pubkey::Pubkey,
     std::{
         cell::{Ref, RefMut},
-        collections::HashMap,
-        mem::size_of,
     },
 };
 use crate::accounts::{cast_slice, cast_slice_mut};
+use crate::accounts::account::Account;
 use crate::accounts::account_lock::AccountLock;
+use crate::accounts::account_state::AccountState;
 use crate::accounts::account_type::AccountType;
 use crate::accounts::holder_lock::HolderLock;
-use crate::error::Error::WrongIndex;
+use crate::cast_data_slice;
+use crate::error::Error::CalculationOverflow;
 
 #[repr(C, packed)]
 pub struct HolderData {
+}
 
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct HolderMap {
+    pub map: BTreeMap<Pubkey, Account>,
 }
 
 impl HolderData {
@@ -28,83 +36,78 @@ impl HolderData {
     
         Ok(())
     }
+    
+    pub fn get(holder_info: &AccountInfo, key: Pubkey) -> Result<Account, Error> {
+        let holder = HolderData::from_account_mut(holder_info)?;
 
-    // pub fn add(&mut self, pda: &Pubkey, balance: u64) -> Result<(), Error> {
-    //     //let balances = unsafe { &mut *std::ptr::addr_of_mut!(self.balances) };
-    //     let mut balances = self.balances.clone();
-    //     balances.push(balance);
-    //
-    //     Ok(())
-    // }
+        let decoded_state = HolderMap::try_from_slice(&*holder)
+            .map_err(|_| ProgramError::InvalidAccountData)?;
 
-    pub fn add_from(info: &AccountInfo,  balance: u64) -> Result<(), Error> {
-        let mut holder = HolderData::from_account_mut(info)?;
-        let mut vec = holder.to_vec();
+        let account = decoded_state.map.get(&key).ok_or(Error::AccountNotFound(key))?;
 
-        if(vec.len() > 0) {
-            return Ok(()); // from (signer) has already been added
-        }
+        Ok(account.clone())
+    }
 
-        vec.push(balance);
-        holder.copy_from_slice(&*vec);
+    pub fn map(holder_info: &AccountInfo) -> Result<HolderMap, Error> {
+        let holder = HolderData::from_account_mut(holder_info)?;
+
+        let holder_map = HolderMap::try_from_slice(&*holder)
+            .map_err(|_| ProgramError::InvalidAccountData)?;
+
+        Ok(holder_map)
+    }
+
+    pub fn set(holder_info: &AccountInfo, key: Pubkey, balance_info: &AccountInfo) -> Result<(), Error> {
+        let balance_account = Account::from_account_info(balance_info);
+
+        HolderData::set_account(holder_info, key, balance_account)?;
+
         Ok(())
     }
 
-    pub fn add_to(info: &AccountInfo, balance: u64) -> Result<usize, Error> {
-        let mut holder = HolderData::from_account_mut(info)?;
+    pub fn set_account(holder_info: &AccountInfo, key: Pubkey, balance_account: Account) -> Result<(), Error> {
+        let mut holder = HolderData::from_account_mut(holder_info)?;
 
-        let mut vec = holder.to_vec();
-
-        if(vec.len() == 0) {
-            return Err(Error::ListIsEmpty); // from (signer) hasn't already been added. Add from (signer) first
-        }
-
-        vec.push(balance);
-        let index = vec.len() - 1;
-        holder.copy_from_slice(&*vec);
-        Ok(index)
-    }
-
-    // pub fn remove(info: &AccountInfo,  index: usize) -> Result<(), Error> {
-    //     let mut holder = HolderData::from_account_mut(info)?;
-    // 
-    //     let mut vec = holder.to_vec();
-    //     vec.remove(index);
-    //     holder.copy_from_slice(&*vec);
-    //     Ok(())
-    // }
-
-    pub fn get(info: &AccountInfo, index: usize) -> Result<u64, Error> {
-
-        if !HolderData::index_exist(info, index)? {
-            return Err(Error::IndexOutOfRange);
-        }
+        // let mut decoded_state = HolderMap::try_from_slice(&*holder)
+        //     .map_err(|_| ProgramError::InvalidAccountData)?;
         
-        let data = HolderData::from_account_mut(info)?;
+        let mut decoded_state = HolderData::map(holder_info)?;
 
-        Ok(data[index])
+        decoded_state.map.insert(key, balance_account);
+
+        let mut writer = &mut holder[..];
+        decoded_state.serialize(&mut writer)
+            .map_err(|_| ProgramError::InvalidAccountData)?;
+
+        Ok(())
     }
+    
+    pub fn update_balance(holder: &AccountInfo, new_amount: u64, account: &Account, balance_pda_key: Pubkey) -> Result<(), Error> {
+        let state = cast_data_slice::<AccountState>(&account.data);
 
-    pub fn index_exist(info: &AccountInfo, index: usize) -> Result<bool, Error> {
-        let data = HolderData::from_account_mut(info)?;
+        let new_state = AccountState {
+            balance: state.balance.checked_sub(new_amount)
+                .ok_or(CalculationOverflow)?,
+        };
 
-        if index >= data.len() {
-            return Ok(false);
-        }
+        let new_account = Account {
+            lamports: account.lamports,
+            data: new_state.serialize(),
+            owner: account.owner,
+            executable: account.executable,
+            rent_epoch: account.rent_epoch,
+            writable: account.writable,
+        };
 
-        Ok(true)
-    }
+        HolderData::set_account(holder, balance_pda_key, new_account)?;
 
-    pub fn set(info: &AccountInfo, index: usize, balance: u64) -> Result<(), Error> {
-        let mut holder = HolderData::from_account_mut(info)?;
-        holder[index] = balance;
         Ok(())
     }
 }
 
 impl Data for HolderData {
-    type Item<'a> = Ref<'a, [u64]>;
-    type ItemMut<'a> = RefMut<'a, [u64]>;
+    type Item<'a> = Ref<'a, [u8]>;
+    type ItemMut<'a> = RefMut<'a, [u8]>;
 
     fn from_account<'a>(info: &'a AccountInfo) -> Result<Self::Item<'a>, Error> {
         cast_slice(info, Self::offset(info), Self::size(info))

@@ -1,5 +1,4 @@
 use std::mem;
-use std::os::linux::raw::stat;
 use {
     crate::{
         accounts::{account_state::AccountState, Data},
@@ -54,14 +53,11 @@ pub fn lock<'a>(
 
     let holder = state.holder(uid, &mint_key)?;
 
-    let account_state_from = AccountState::from_account(balance_pda_from)?;
-    let account_state_to = AccountState::from_account(balance_pda_to)?;
+    HolderData::set(holder, *balance_pda_from.key, balance_pda_from)?;
+    HolderData::set(holder, *balance_pda_to.key, balance_pda_to)?;
 
-    HolderData::add_from(holder, account_state_from.balance)?;
-    let index = HolderData::add_to(holder, account_state_to.balance)?;
-
-    account_lock_from.lock(holder.key, 0)?;
-    account_lock_to.lock(holder.key, index)?;
+    account_lock_from.lock(holder.key)?;
+    account_lock_to.lock(holder.key)?;
     
     let mut holder_lock = HolderLock::from_account_mut(holder)?;
     

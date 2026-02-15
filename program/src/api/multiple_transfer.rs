@@ -1,9 +1,5 @@
 use {
-    crate::{
-        accounts::{account_state::AccountState, Data},
-        error::Error::CalculationOverflow,
-        state::State,
-    },
+    crate::state::State,
     solana_msg::msg,
     solana_program::{account_info::AccountInfo, entrypoint_deprecated::ProgramResult},
     solana_program_error::ProgramError,
@@ -11,7 +7,13 @@ use {
     std::mem,
 };
 use crate::accounts::holder_data::HolderData;
-use crate::accounts::holder_lock::HolderLock;
+
+pub fn cast_data_slice<T>(data: &[u8]) -> &T {
+    //assert_eq!(align_of::<T>(), 1);
+    //assert_eq!(data.len(), size_of::<T>());
+
+    unsafe { &*data.as_ptr().cast::<T>() }
+}
 
 pub fn multiple_transfer<'a>(
     program: &'a Pubkey,
@@ -37,22 +39,21 @@ pub fn multiple_transfer<'a>(
 
     let holder = state.holder(uid, &mint_key)?;
 
-    let mut holder_data = HolderData::from_account_mut(holder)?;
+    let balance_pda_from = state.balance_info(&state.signer().key, &mint_key)?;
 
-    let from_value = holder_data[0];
+    let account_from = HolderData::get(holder, *balance_pda_from.key)?;
 
-    let to_len = holder_data.len() as u64 - 1;
+    let holder_map = HolderData::map(holder)?;
 
-    holder_data[0] = from_value.checked_sub(to_len * amount)
-        .ok_or(CalculationOverflow)?;
-    
-    for i in 1..to_len {
-        holder_data[i as usize] = holder_data[i as usize] + amount;
+    let holder_map_count = holder_map.map.len() as u32;
+
+    let to_len = holder_map_count as u64 - 1;
+
+    HolderData::update_balance(holder, to_len * amount, &account_from, *balance_pda_from.key)?;
+
+    for (balance_pda_to_key, account_to) in holder_map.map.iter().filter(|(&k, _)| k != *balance_pda_from.key) {
+        HolderData::update_balance(holder, amount, account_to, *balance_pda_to_key)?;
     }
-
-    let mut holder_lock = HolderLock::from_account_mut(holder)?;
-
-    holder_lock.unlock();
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 use std::mem;
 use {
     crate::{
-        accounts::{account_state::AccountState, Data},
+        accounts::Data,
         state::State,
     },
     solana_msg::msg,
@@ -55,21 +55,19 @@ pub fn unlock<'a>(
 
     let holder_lock = HolderLock::from_account_mut(holder)?;
 
-    if !HolderData::index_exist(holder, account_lock.index)? {
-        return Err(Error::WrongIndex.into());
-    }
-
     if holder_lock.get()? {
         return Err(AccountLocked.into());
     }
 
-    //let account_state = AccountState::from_account(balance_pda)?;
+    let account_data = HolderData::get(holder, *balance_pda.key)?;
 
-    //let index = HolderData::add(holder, account_state.balance)?;
+    let mut dest_data = balance_pda.data.borrow_mut();
 
-    let mut account_state = AccountState::from_account_mut(balance_pda)?;
+    if dest_data.len() != account_data.data.len() {
+        return Err(ProgramError::AccountDataTooSmall);
+    }
 
-    account_state.balance = HolderData::get(holder, account_lock.index)?;
+    dest_data.copy_from_slice(&account_data.data);
 
     account_lock.unlock()?;
 

@@ -4,17 +4,18 @@ pub mod holder_lock;
 pub mod ver;
 pub mod account_type;
 pub mod account_lock;
-mod account;
+pub mod account;
 
 use std::ptr;
 use {
-    crate::error::Error::InvalidDataLength,
+    crate::error::Error::InvalidAccountDataLength,
     solana_program::account_info::AccountInfo,
     std::{
         cell::{Ref, RefMut},
         mem::{align_of, size_of},
     },
 };
+use crate::error::Error::InvalidDataLength;
 
 pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
@@ -28,15 +29,20 @@ pub trait Data {
 }
 
 pub fn cast<'a, T>(info: &'a AccountInfo, offset: usize, len: usize) -> Result<Ref<'a, T>> {
-    assert_eq!(align_of::<T>(), 1);
-
     let data = info.data.borrow();
 
     if data.len() < offset + len {
-        return Err(InvalidDataLength(*info.key, data.len(), offset + len));
+        return Err(InvalidAccountDataLength(*info.key, data.len(), offset + len));
     }
 
     let data = Ref::map(data, |a| &a[offset..offset + len]);
+
+    cast_data(data)
+}
+
+pub fn cast_data<T>(data: Ref<[u8]>) -> Result<Ref<T>> {
+    assert_eq!(align_of::<T>(), 1);
+
     assert_eq!(data.len(), size_of::<T>());
 
     let state = Ref::map(data, |a| {
@@ -48,15 +54,20 @@ pub fn cast<'a, T>(info: &'a AccountInfo, offset: usize, len: usize) -> Result<R
 }
 
 pub fn cast_mut<'a, T>(info: &'a AccountInfo, offset: usize, len: usize) -> Result<RefMut<'a, T>> {
-    assert_eq!(align_of::<T>(), 1);
-
     let data = info.data.borrow_mut();
 
     if data.len() < offset + len {
-        return Err(InvalidDataLength(*info.key, data.len(), offset + len));
+        return Err(InvalidAccountDataLength(*info.key, data.len(), offset + len));
     }
 
     let data = RefMut::map(data, |a| &mut a[offset..offset + len]);
+
+    cast_data_mut(data)
+}
+
+pub fn cast_data_mut<T>(data: RefMut<[u8]>) -> Result<RefMut<T>> {
+    assert_eq!(align_of::<T>(), 1);
+
     assert_eq!(data.len(), size_of::<T>());
 
     let state = RefMut::map(data, |a| {
@@ -74,7 +85,7 @@ fn cast_slice<'a, T>(info: &'a AccountInfo, offset: usize, count: usize) -> Resu
 
     let len = count * size_of::<T>();
     if data.len() < offset + len {
-        return Err(InvalidDataLength(*info.key, data.len(), offset + len));
+        return Err(InvalidAccountDataLength(*info.key, data.len(), offset + len));
     }
 
     let data = Ref::map(data, |a| &a[offset..offset + len]);
@@ -99,7 +110,7 @@ fn cast_slice_mut<'a, T>(
 
     let len = count * size_of::<T>();
     if data.len() < offset + len {
-        return Err(InvalidDataLength(*info.key, data.len(), offset + len));
+        return Err(InvalidAccountDataLength(*info.key, data.len(), offset + len));
     }
 
     let data = RefMut::map(data, |a| &mut a[offset..offset + len]);

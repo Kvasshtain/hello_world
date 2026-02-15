@@ -3,7 +3,10 @@ use {solana_program_error::ProgramError, solana_pubkey::Pubkey, thiserror::Error
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Invalid data length: {0} {1}, {2}")]
-    InvalidDataLength(Pubkey, usize, usize),
+    InvalidAccountDataLength(Pubkey, usize, usize),
+
+    #[error("Invalid data length: {0}, {1}")]
+    InvalidDataLength(usize, usize),
 
     #[error("Calculation overflow")]
     CalculationOverflow,
@@ -49,6 +52,15 @@ pub enum Error {
 
     #[error("Invalid serialized data")]
     InvalidData,
+
+    #[error("Account data mismatch")]
+    AccountDataMismatch,
+
+    #[error("Failed to serialize data")]
+    SerializationError,
+
+    #[error("Account data is too small for the new map size")]
+    AccountTooSmall,
 }
 
 impl From<ProgramError> for Error {

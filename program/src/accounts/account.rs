@@ -7,6 +7,7 @@ use {
         pubkey::Pubkey,
     },
 };
+use crate::error::Error;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct Account {
@@ -30,7 +31,7 @@ impl Account {
         }
     }
 
-    pub fn to_account_info(&self, info: &AccountInfo) {
+    pub fn to_account_info(&self, info: &AccountInfo) -> Result<(), Error> {
         {
             let mut lamports_ref = info.lamports.borrow_mut();
             **lamports_ref = self.lamports;
@@ -38,13 +39,22 @@ impl Account {
 
         {
             let mut data_ref = info.data.borrow_mut();
-            let data_slice: &mut [u8] = &mut *data_ref;
-            assert_eq!(
-                data_slice.len(),
-                self.data.len(),
-                "destination account data length does not match source"
-            );
-            data_slice.copy_from_slice(&self.data);
+
+            if data_ref.len() != self.data.len() {
+                return Err(Error::AccountDataMismatch);
+            }
+
+            data_ref.copy_from_slice(&self.data);
+
+            Ok(())
+
+            // let data_slice: &mut [u8] = &mut *data_ref;
+            // assert_eq!(
+            //     data_slice.len(),
+            //     self.data.len(),
+            //     "destination account data length does not match source"
+            // );
+            // data_slice.copy_from_slice(&self.data);
         }
     }
 }

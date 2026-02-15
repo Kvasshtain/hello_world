@@ -1,6 +1,6 @@
 use {
     crate::{
-        accounts::{account_type::AccountType, cast, cast_mut, holder_lock::HolderLock, Data},
+        accounts::{account_type::AccountType, cast, cast_mut, Data},
         error::Error,
     },
     solana_program::account_info::AccountInfo,
@@ -32,6 +32,10 @@ impl AccountState {
         };
 
         Ok(())
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        self.balance.to_le_bytes().to_vec()
     }
 }
 
